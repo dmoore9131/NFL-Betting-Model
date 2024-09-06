@@ -1,4 +1,5 @@
-<html>![OIG2 IZ00eD](https://github.com/user-attachments/assets/5124bd91-7a44-4627-a44a-f88f9669995c)
+!Alt text
+<html>![OIG2 IZ00eD](https://github.com/user-attachments/assets/b6f2aa46-f31d-4049-b3e9-7637a4046c90)
 </html>
 
 # NFL Betting Model Project
