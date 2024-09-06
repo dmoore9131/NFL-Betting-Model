@@ -1,4 +1,5 @@
-<html>"C:\Users\domin\Downloads\futuristic-football-soccer-player-with-glowing-lights.jpg"</html>
+<html>![Uploading futuristic-football-soccer-player-with-glowing-lights.jpg…]()
+</html>
 
 # NFL Betting Model Project
 
