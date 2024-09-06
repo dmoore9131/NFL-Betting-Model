@@ -1,4 +1,4 @@
-<html>https://th.bing.com/th/id/OIG2.IZ00eD.LcWV_TdhADkWW?w=1024&h=1024&rs=1&pid=ImgDetMain</html>
+<html>https://www.bing.com/images/create/real-nfl-chart-graph-analysis/1-66db767a763a40108e578a124e76e7ba?id=vMUTq%2biq9vf6xD8VOViBuA%3d%3d&view=detailv2&idpp=genimg&idpclose=1&thId=OIG2.IZ00eD.LcWV_TdhADkWW&frame=sydedg&skey=tHtuH9B6F2qIDBW0rKCq0nQ3NYB1foiAKVmrQvwvXcs&FORM=SYDBIC</html>
 
 # NFL Betting Model Project
 
