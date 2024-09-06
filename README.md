@@ -1,6 +1,5 @@
-<htm![Uploading futuristic-football-soccer-player-with-glowing-lights.jpg…]()
-l>
-</html>
+<img>![futuristic-football-soccer-player-with-glowing-lights](https://github.com/user-attachments/assets/958a9409-57a9-45eb-bd3f-d3817ef4345b)<img>
+
 
 # NFL Betting Model Project
 
