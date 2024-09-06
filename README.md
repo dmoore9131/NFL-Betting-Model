@@ -17,8 +17,7 @@ The NFL Betting Model Project aims to analyze and provide insights into NFL game
 - **Most Targets Analysis**: Identifies players likely to receive the most targets based on their team’s offensive strategies and current injuries.
   <img>![download](https://github.com/user-attachments/assets/25887ef8-c4b5-4148-8b8d-b84e7edeb4ad)
 <img>
-<img>![download (1)](https://github.com/user-attachments/assets/950489ad-aba7-4dc0-b02c-54bde240efc9)
-<img> 
+<img> ![download (1)](https://github.com/user-attachments/assets/25e3802d-f4e5-4b07-921b-0ce34580ea90) <img>
 
 
 ## Data Sources
