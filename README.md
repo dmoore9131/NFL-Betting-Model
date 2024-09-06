@@ -1,7 +1,3 @@
-Sure, here’s a sample `README.md` for your NFL Betting Model project based on the code and features you’ve described:
-
----
-
 # NFL Betting Model Project
 
 ## Overview
