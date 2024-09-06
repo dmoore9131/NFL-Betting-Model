@@ -1,7 +1,7 @@
 import pandas as pd
-import numpy as np
+import requests
 
-# Define updated team rosters
+# Define rosters for Packers and Eagles
 eagles_roster = {
     'Position': [
         'QB', 'RB', 'WR', 'WR', 'WR', 'TE', 'LT', 'LG', 'C', 'RG', 'RT',
@@ -9,29 +9,28 @@ eagles_roster = {
         'PK', 'P', 'H', 'PR', 'KR', 'LS'
     ],
     'Starter': [
-        'Jalen Hurts', 'Saquon Barkley', 'A.J. Brown', 'DeVonta Smith', 'Jahan Dotson', 
-        'Dallas Goedert', 'Jordan Mailata', 'Landon Dickerson', 'Cam Jurgens', 'Mekhi Becton', 
-        'Lane Johnson', 'Milton Williams', 'Jordan Davis', 'Jalen Carter', 'Bryce Huff', 
-        'Zack Baun', 'Nakobe Dean', 'Josh Sweat', 'Kelee Ringo', 'C.J. Gardner-Johnson', 
-        'Reed Blankenship', 'Darius Slay Jr.', 'Quinyon Mitchell', 'Jake Elliott', 'Braden Mann', 
-        'Braden Mann', 'Britain Covey', 'Isaiah Rodgers O', 'Rick Lovato'
+        'Jalen Hurts', 'Saquon Barkley', 'A.J. Brown', 'DeVonta Smith', 'Jahan Dotson',
+        'Dallas Goedert', 'Jordan Mailata', 'Landon Dickerson', 'Cam Jurgens', 'Mekhi Becton',
+        'Lane Johnson', 'Milton Williams', 'Jordan Davis', 'Jalen Carter', 'Bryce Huff',
+        'Zack Baun', 'Nakobe Dean', 'Josh Sweat', 'Kelee Ringo', 'C.J. Gardner-Johnson',
+        'Reed Blankenship', 'Darius Slay Jr.', 'Quinyon Mitchell', 'Jake Elliott', 'Braden Mann',
+        'Britain Covey', 'Isaiah Rodgers O', 'Rick Lovato'
     ],
     '2nd': [
-        'Kenny Pickett', 'Kenneth Gainwell', 'Johnny Wilson', 'Britain Covey', 'Ainias Smith IR', 
-        'Grant Calcaterra', 'Fred Johnson', 'Trevor Keegan', '-', 'Tyler Steen', 
-        'Darian Kinnard', 'Moro Ojomo', 'Byron Young', 'Thomas Booker IV', 'Brandon Graham', 
-        'Jeremiah Trotter Jr.', 'Devin White O', 'Nolan Smith Jr.', 'Isaiah Rodgers O', 
-        'Avonte Maddox', 'James Bradberry IV IR', 'Cooper DeJean', '-', '-', '-', '-', 
+        'Kenny Pickett', 'Kenneth Gainwell', 'Johnny Wilson', 'Britain Covey', 'Ainias Smith IR',
+        'Grant Calcaterra', 'Fred Johnson', 'Trevor Keegan', '-', 'Tyler Steen',
+        'Darian Kinnard', 'Moro Ojomo', 'Byron Young', 'Thomas Booker IV', 'Brandon Graham',
+        'Jeremiah Trotter Jr.', 'Devin White O', 'Nolan Smith Jr.', 'Isaiah Rodgers O',
+        'Avonte Maddox', 'James Bradberry IV IR', 'Cooper DeJean', '-', '-', '-', '-',
         '-', '-', '-', '-'
     ],
     '3rd': [
-        'Tanner McKee', 'Will Shipley', 'Jacob Harris IR', '-', '-', 'Albert Okwuegbunam Jr. IR', 
-        '-', '-', '-', '-', 'Brandon Graham', '-', '-', 'Oren Burks', 'Ben VanSumeren', 
-        'Jalyx Hunt', 'Eli Ricks', 'Tristin McCollum', 'Sydney Brown O', '-', '-', '-', 
-        '-', '-', '-', '-'
+        'Tanner McKee', 'Will Shipley', 'Jacob Harris IR', '-', '-', 'Albert Okwuegbunam Jr. IR',
+        '-', '-', '-', '-', 'Travis Glover', 'Brenton Cox Jr.', 'Colby Wooden', 'Jonathan Ford IR', 'Arron Mosby O',
+        '-', '-', '-', 'LJ Davis IR', '-', '-', '-', '-', '-', '-', '-'
     ],
     '4th': [
-        '-', '-', '-', '-', '-', 'McCallan Castles IR', '-', '-', '-', '-', 
+        '-', '-', '-', '-', '-', 'McCallan Castles IR', '-', '-', '-', '-',
         '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'
     ]
 }
@@ -43,208 +42,144 @@ packers_roster = {
         'PK', 'P', 'H', 'PR', 'KR', 'LS'
     ],
     'Starter': [
-        'Jordan Love', 'Josh Jacobs', 'Christian Watson', 'Romeo Doubs', 'Jayden Reed', 
-        'Luke Musgrave', 'Rasheed Walker', 'Elgton Jenkins', 'Josh Myers', 'Jordan Morgan', 
-        'Zach Tom', 'Preston Smith', 'Kenny Clark', 'T.J. Slaton', 'Rashan Gary', 
-        'Quay Walker', 'Eric Wilson', 'Isaiah McDuffie', 'Jaire Alexander', 'Javon Bullard', 
-        'Xavier McKinney', 'Eric Stokes', 'Keisean Nixon', 'Brayden Narveson', 'Daniel Whelan', 
-        'Daniel Whelan', 'Keisean Nixon', 'Keisean Nixon', 'Matt Orzech'
+        'Jordan Love', 'Josh Jacobs', 'Christian Watson', 'Romeo Doubs', 'Jayden Reed',
+        'Luke Musgrave', 'Rasheed Walker', 'Elgton Jenkins', 'Josh Myers', 'Jordan Morgan',
+        'Zach Tom', 'Preston Smith', 'Kenny Clark', 'T.J. Slaton', 'Rashan Gary',
+        'Quay Walker', 'Eric Wilson', 'Isaiah McDuffie', 'Jaire Alexander', 'Javon Bullard',
+        'Xavier McKinney', 'Eric Stokes', 'Keisean Nixon', 'Brayden Narveson', 'Daniel Whelan',
+        'Keisean Nixon', 'Matt Orzech'
     ],
     '2nd': [
-        'Malik Willis', 'MarShawn Lloyd Q', 'Dontayvion Wicks', 'Bo Melton', 'Malik Heath', 
-        'Tucker Kraft Q', 'Andre Dillard', '-', 'Jacob Monk', 'Sean Rhyan', 'Kadeem Telfort', 
-        'Lukas Van Ness', 'Devonte Wyatt', 'Karl Brooks', 'Kingsley Enagbare', '-', 
-        'Edgerrin Cooper', 'Ty\'Ron Hopper', 'Corey Ballentine', 'Evan Williams', 
-        'Zayne Anderson', 'Carrington Valentine', '-', '-', '-', '-', '-', '-', 
+        'Malik Willis', 'MarShawn Lloyd Q', 'Dontayvion Wicks', 'Bo Melton', 'Malik Heath',
+        'Tucker Kraft Q', 'Andre Dillard', '-', 'Jacob Monk', 'Sean Rhyan', 'Kadeem Telfort',
+        'Lukas Van Ness', 'Devonte Wyatt', 'Karl Brooks', 'Kingsley Enagbare', '-',
+        'Edgerrin Cooper', 'Ty\'Ron Hopper', 'Corey Ballentine', 'Evan Williams',
+        'Zayne Anderson', 'Carrington Valentine', '-', '-', '-', '-', '-', '-',
         '-', '-', '-', '-'
     ],
     '3rd': [
-        '-', 'Emanuel Wilson Q', '-', '-', '-', 'Ben Sims', '-', '-', '-', '-', 
-        'Travis Glover', 'Brenton Cox Jr.', 'Colby Wooden', 'Jonathan Ford IR', 'Arron Mosby O', 
-        '-', '-', '-', 'LJ Davis IR', '-', '-', '-', '-', '-', '-', '-', '-', '-'
+        '-', 'Emanuel Wilson Q', '-', '-', '-', 'Ben Sims', '-', '-', '-', '-',
+        'Travis Glover', 'Brenton Cox Jr.', 'Colby Wooden', 'Jonathan Ford IR', 'Arron Mosby O',
+        '-', '-', '-', 'LJ Davis IR', '-', '-', '-', '-', '-', '-', '-'
     ],
     '4th': [
-        '-', 'AJ Dillon IR', '-', '-', '-', 'Tyler Davis IR', '-', '-', '-', '-', 
+        '-', 'AJ Dillon IR', '-', '-', '-', 'Tyler Davis IR', '-', '-', '-', '-',
         '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'
     ]
 }
 
-def fetch_historical_game_data():
-    data = {
-        'Game': ['Packers vs Eagles'] * 10,
-        'Home Team': ['Eagles'] * 10,
-        'Away Team': ['Packers'] * 10,
-        'Home Score': [24] * 10,
-        'Away Score': [27] * 10
-    }
-    df_game_data = pd.DataFrame(data)
-    return df_game_data
+# Function to fetch live rosters using ESPN API
+def get_team_roster(team_id):
+    url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}"
+    response = requests.get(url)
+    data = response.json()
+    roster = data['team']['roster']['entries']
+    return roster
 
-def fetch_live_game_data():
-    data = {
-        'Team': ['Packers', 'Eagles'],
-        'Current Score': [28, 21]
-    }
-    df_live_game_data = pd.DataFrame(data)
-    return df_live_game_data
-
-def fetch_player_stats():
-    data = {
-        'Team': ['Packers'] * 5 + ['Eagles'] * 5,
-        'Player': ['Jordan Love', 'Josh Jacobs', 'Christian Watson', 'Romeo Doubs', 'Jayden Reed',
-                   'Jalen Hurts', 'Saquon Barkley', 'A.J. Brown', 'DeVonta Smith', 'Dallas Goedert'],
-        'Position': ['QB', 'RB', 'WR', 'WR', 'WR', 'QB', 'RB', 'WR', 'WR', 'TE'],
-        'Yards': [320, 95, 85, 90, 100, 340, 95, 105, 90, 85],
-        'Touchdowns': [3, 1, 1, 1, 1, 3, 1, 2, 1, 1]
-    }
-    df_player_stats = pd.DataFrame(data)
-    return df_player_stats
-
-def fetch_injury_reports():
-    data = {
-        'Team': ['Packers', 'Eagles'],
-        'Player': ['Josh Jacobs', 'Lane Johnson'],
-        'Injury': ['Hamstring', 'Ankle'],
-        'Status': ['Questionable', 'Probable']
-    }
-    df_injury_reports = pd.DataFrame(data)
-    return df_injury_reports
-
-def fetch_training_camp_data():
-    data = {
-        'Team': ['Packers', 'Eagles'],
-        'Player': ['Jordan Love', 'Jalen Hurts'],
-        'Camp Performance': [92, 95],
-        'Camp Insights': ['Improved passing accuracy', 'Excellent leadership']
-    }
-    df_training_camp = pd.DataFrame(data)
-    return df_training_camp
-
-def fetch_mini_camp_data():
-    data = {
-        'Team': ['Packers', 'Eagles'],
-        'Player': ['Christian Watson', 'A.J. Brown'],
-        'Mini Camp Performance': [90, 93],
-        'Mini Camp Insights': ['Strong route running', 'Outstanding catch ability']
-    }
-    df_mini_camp = pd.DataFrame(data)
-    return df_mini_camp
-
-def fetch_walk_through_data():
-    data = {
-        'Team': ['Packers', 'Eagles'],
-        'Player': ['Elgton Jenkins', 'Fletcher Cox'],
-        'Walk Through Performance': [88, 90],
-        'Walk Through Insights': ['Improved blocking', 'Strong defensive presence']
-    }
-    df_walk_through = pd.DataFrame(data)
-    return df_walk_through
-
-def advanced_stats():
-    data = {
-        'Team': ['Packers', 'Eagles'],
-        'Average Yards per Game': [350, 320],
-        'Turnovers': [10, 8],
-        'Sacks Allowed': [25, 22]
-    }
-    df_adv_stats = pd.DataFrame(data)
-    return df_adv_stats
-
-def head_to_head_data():
-    data = {
-        'Team': ['Packers', 'Eagles'],
-        'Head-to-Head Wins': [3, 2]
-    }
-    df_head_to_head = pd.DataFrame(data)
-    return df_head_to_head
-
-def top_performers():
-    data = {
-        'Team': ['Packers', 'Eagles'],
-        'Player': ['Jordan Love', 'Jalen Hurts'],
-        'Performance Score': [95, 97]
-    }
-    df_performers = pd.DataFrame(data)
-    return df_performers
-
-def compile_data():
-    historical_game_data = fetch_historical_game_data()
-    live_game_data = fetch_live_game_data()
-    training_camp_data = fetch_training_camp_data()
-    mini_camp_data = fetch_mini_camp_data()
-    walk_through_data = fetch_walk_through_data()
-    adv_stats = advanced_stats()
-    head_to_head = head_to_head_data()
-    performers = top_performers()
+# Define the 2024 rosters for other teams
+def fetch_all_team_rosters():
+    teams = [
+        '49ers', 'Bears', 'Bengals', 'Bills', 'Broncos', 'Browns', 'Buccaneers', 'Cardinals',
+        'Chargers', 'Chiefs', 'Colts', 'Commanders', 'Cowboys', 'Dolphins', 'Falcons', 'Giants',
+        'Jaguars', 'Jets', 'Lions', 'Panthers', 'Patriots', 'Raiders', 'Rams', 'Ravens', 'Saints',
+        'Seahawks', 'Steelers', 'Texans', 'Titans', 'Vikings'
+    ]
     
-    # Ensure DataFrames have consistent column names
-    historical_game_data.rename(columns={'Home Team': 'Team'}, inplace=True)
-    live_game_data.rename(columns={'Team': 'Team'}, inplace=True)
-    training_camp_data.rename(columns={'Team': 'Team'}, inplace=True)
-    mini_camp_data.rename(columns={'Team': 'Team'}, inplace=True)
-    walk_through_data.rename(columns={'Team': 'Team'}, inplace=True)
-    adv_stats.rename(columns={'Team': 'Team'}, inplace=True)
-    head_to_head.rename(columns={'Team': 'Team'}, inplace=True)
-    performers.rename(columns={'Team': 'Team'}, inplace=True)
-    
-    # Ensure all DataFrames have the same length
-    max_length = max(len(historical_game_data), len(live_game_data), len(training_camp_data),
-                     len(mini_camp_data), len(walk_through_data), len(adv_stats), len(head_to_head),
-                     len(performers))
-    
-    # Pad DataFrames with NaNs to ensure they all have the same length
-    def pad_df(df, max_length):
-        if len(df) < max_length:
-            df = pd.concat([df, pd.DataFrame(np.nan, index=range(max_length - len(df)), columns=df.columns)], ignore_index=True)
-        return df
-    
-    historical_game_data = pad_df(historical_game_data, max_length)
-    live_game_data = pad_df(live_game_data, max_length)
-    training_camp_data = pad_df(training_camp_data, max_length)
-    mini_camp_data = pad_df(mini_camp_data, max_length)
-    walk_through_data = pad_df(walk_through_data, max_length)
-    adv_stats = pad_df(adv_stats, max_length)
-    head_to_head = pad_df(head_to_head, max_length)
-    performers = pad_df(performers, max_length)
-
-    return historical_game_data, live_game_data, training_camp_data, mini_camp_data, walk_through_data, adv_stats, head_to_head, performers
-
-def predict_game():
-    # Placeholder for actual prediction logic
-    predicted_home_score = 24
-    predicted_away_score = 27
-    winner = "Packers"
-    reason = "Based on recent performance and player stats."
-    return predicted_home_score, predicted_away_score, winner, reason
-
-def game_summary():
-    historical_game_data, live_game_data, training_camp_data, mini_camp_data, walk_through_data, adv_stats, head_to_head, performers = compile_data()
-    
-    predicted_home_score, predicted_away_score, winner, reason = predict_game()
-    
-    summary = {
-        'Historical Game Data': historical_game_data,
-        'Live Game Data': live_game_data,
-        'Training Camp Data': training_camp_data,
-        'Mini Camp Data': mini_camp_data,
-        'Walk Through Data': walk_through_data,
-        'Advanced Statistics': adv_stats,
-        'Head-to-Head Data': head_to_head,
-        'Top Performers': performers,
-        'Predicted Scores': {
-            'Eagles': predicted_home_score,
-            'Packers': predicted_away_score
-        },
-        'Prediction Reason': reason,
-        'Predicted Winner': winner
+    team_ids = {
+        '49ers': '1', 'Bears': '2', 'Bengals': '3', 'Bills': '4', 'Broncos': '5', 'Browns': '6',
+        'Buccaneers': '7', 'Cardinals': '8', 'Chargers': '9', 'Chiefs': '10', 'Colts': '11',
+        'Commanders': '12', 'Cowboys': '13', 'Dolphins': '14', 'Falcons': '15', 'Giants': '16',
+        'Jaguars': '17', 'Jets': '18', 'Lions': '19', 'Panthers': '20', 'Patriots': '21',
+        'Raiders': '22', 'Rams': '23', 'Ravens': '24', 'Saints': '25', 'Seahawks': '26',
+        'Steelers': '27', 'Texans': '28', 'Titans': '29', 'Vikings': '30'
     }
     
-    return summary
+    teams_rosters = {}
+    for team in teams:
+        team_id = team_ids[team]
+        teams_rosters[team] = get_team_roster(team_id)
+    
+    return teams_rosters
 
-# Fetch and display game summary
-try:
-    game_summary_data = game_summary()
-    for key, value in game_summary_data.items():
-        print(f"{key}:\n{value}\n")
-except Exception as e:
-    print(f"An error occurred: {e}")
+def fetch_game_data(game_id):
+    # Simulated game data for demonstration
+    game_data = {
+        1: {
+            'Historical': pd.DataFrame({
+                'Game': ['Packers vs Eagles'] * 10,
+                'Home Team': ['Eagles'] * 10,
+                'Away Team': ['Packers'] * 10,
+                'Home Score': [24] * 10,
+                'Away Score': [27] * 10
+            }),
+            'Live': pd.DataFrame({
+                'Team': ['Packers', 'Eagles'],
+                'Current Score': [28, 21]
+            }),
+            'Player Stats': pd.DataFrame({
+                'Team': ['Packers'] * 5 + ['Eagles'] * 5,
+                'Player': ['Jordan Love', 'Josh Jacobs', 'Christian Watson', 'Romeo Doubs', 'Jayden Reed',
+                           'Jalen Hurts', 'Saquon Barkley', 'A.J. Brown', 'DeVonta Smith', 'Dallas Goedert'],
+                'Position': ['QB', 'RB', 'WR', 'WR', 'WR', 'QB', 'RB', 'WR', 'WR', 'TE'],
+                'Yards': [320, 95, 85, 90, 100, 340, 95, 105, 90, 85],
+                'Touchdowns': [3, 1, 1, 1, 1, 3, 1, 2, 1, 1],
+                'PFF Grade': [88, 75, 80, 82, 85, 90, 78, 89, 87, 83]  # Example PFF grades
+            }),
+            'Injury Reports': pd.DataFrame({
+                'Player': ['Christian Watson', 'Romeo Doubs', 'Jalen Hurts', 'Saquon Barkley', 'Dallas Goedert'],
+                'Team': ['Packers'] * 2 + ['Eagles'] * 3,
+                'Injury': ['Hamstring', 'Ankle', 'Shoulder', 'Knee', 'Calf'],
+                'Status': ['Doubtful', 'Questionable', 'Probable', 'Out', 'Questionable']
+            })
+        }
+    }
+    
+    game = game_data.get(game_id, None)
+    if game:
+        # Fantasy Draft Decisions
+        fantasy_advice = {
+            'Packers': {
+                'start': [player for player in game['Player Stats'].query("Team == 'Packers' and Position in ['WR', 'RB']")['Player'].tolist() if player not in game['Injury Reports'].query("Status == 'Out'")['Player'].tolist()],
+                'sit': [player for player in game['Player Stats'].query("Team == 'Packers' and Position in ['WR', 'RB']")['Player'].tolist() if player in game['Injury Reports'].query("Status == 'Out'")['Player'].tolist()]
+            },
+            'Eagles': {
+                'start': [player for player in game['Player Stats'].query("Team == 'Eagles' and Position in ['WR', 'RB']")['Player'].tolist() if player not in game['Injury Reports'].query("Status == 'Out'")['Player'].tolist()],
+                'sit': [player for player in game['Player Stats'].query("Team == 'Eagles' and Position in ['WR', 'RB']")['Player'].tolist() if player in game['Injury Reports'].query("Status == 'Out'")['Player'].tolist()]
+            }
+        }
+
+        # Determine who gets the most targets
+        def most_targets(team, injured_players):
+            players = game['Player Stats'].query(f"Team == '{team}' and Position == 'WR' or Position == 'RB'")
+            if injured_players:
+                players = players[~players['Player'].isin(injured_players)]
+            return players.sort_values(by='Yards', ascending=False).iloc[0]['Player'] if not players.empty else 'No available players'
+
+        injured_players_packers = game['Injury Reports'].query("Team == 'Packers' and Status != 'Probable'")['Player'].tolist()
+        injured_players_eagles = game['Injury Reports'].query("Team == 'Eagles' and Status != 'Probable'")['Player'].tolist()
+
+        most_targets_packers = most_targets('Packers', injured_players_packers)
+        most_targets_eagles = most_targets('Eagles', injured_players_eagles)
+
+        return {
+            'Historical': game['Historical'],
+            'Live': game['Live'],
+            'Player Stats': game['Player Stats'],
+            'Injury Reports': game['Injury Reports'],
+            'Fantasy Draft Decisions': fantasy_advice,
+            'Most Targets Packers': most_targets_packers,
+            'Most Targets Eagles': most_targets_eagles
+        }
+    
+    return None
+
+# Example Usage:
+game_data = fetch_game_data(1)
+print(game_data['Historical'])
+print(game_data['Live'])
+print(game_data['Player Stats'])
+print(game_data['Injury Reports'])
+print("Fantasy Draft Decisions:")
+print(game_data['Fantasy Draft Decisions'])
+print("Most Targets Packers:", game_data['Most Targets Packers'])
+print("Most Targets Eagles:", game_data['Most Targets Eagles'])
