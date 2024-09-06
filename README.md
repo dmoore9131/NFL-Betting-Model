@@ -15,6 +15,7 @@ The NFL Betting Model Project aims to analyze and provide insights into NFL game
 - **Injury Reports**: Lists player injuries and their statuses.
 - **Fantasy Draft Decisions**: Offers recommendations on which players to start or sit based on their injury status and performance.
 - **Most Targets Analysis**: Identifies players likely to receive the most targets based on their team’s offensive strategies and current injuries.
+  <img>C:\Users\domin\Downloads\download.jpeg<img> 
 
 ## Data Sources
 
