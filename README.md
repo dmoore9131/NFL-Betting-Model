@@ -1,6 +1,4 @@
-!Alt text
-<html>![OIG2 IZ00eD](https://github.com/user-attachments/assets/b6f2aa46-f31d-4049-b3e9-7637a4046c90)
-</html>
+<html>"C:\Users\domin\Downloads\futuristic-football-soccer-player-with-glowing-lights.jpg"</html>
 
 # NFL Betting Model Project
 
