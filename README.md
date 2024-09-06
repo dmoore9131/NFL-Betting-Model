@@ -1,4 +1,5 @@
-<html>![Uploading futuristic-football-soccer-player-with-glowing-lights.jpg…]()
+<htm![Uploading futuristic-football-soccer-player-with-glowing-lights.jpg…]()
+l>
 </html>
 
 # NFL Betting Model Project
