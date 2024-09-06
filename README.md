@@ -27,7 +27,8 @@ The NFL Betting Model Project aims to analyze and provide insights into NFL game
 - **Historical Game Data**: Simulated for demonstration purposes.
 - **Player Statistics**: Includes example data with player performance metrics and PFF grades.
 - **Injury Reports**: Contains simulated injury data for players.
-- <img> width="716" alt="Screenshot 2024-09-06 173141" src="https://github.com/user-attachments/assets/ec86338c-6f39-4f04-8f29-00b9377089de" <img>
+- <img> <img width="716" alt="Screenshot 2024-09-06 173100" src="https://github.com/user-attachments/assets/a677b7bc-7fb3-46ba-9749-72dd0ef7bbdb">
+<img>
 
 
 ## Setup
