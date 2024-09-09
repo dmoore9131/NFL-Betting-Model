@@ -1,157 +1,203 @@
 import pandas as pd
-import requests
+import time
+import random
 
-# Define rosters for Rams and Lions
-
-def fetch_weather_and_grass_data(game_id):
-    # Simulated weather and grass data for demonstration
-    weather_data = {
-        2: {
-            'Weather': 'Clear',
-            'Grass Type': 'Artificial Turf',
-            'Travel Impact': 3  # 1-10 scale where 10 is highest impact
-        }
+def fetch_historical_game_data():
+    data = {
+        'Game': ['49ers vs Jets'],
+        'Home Team': ['49ers'],
+        'Away Team': ['Jets']
     }
-    return weather_data.get(game_id, None)
+    df_game_data = pd.DataFrame(data)
+    return df_game_data
 
-def fetch_defensive_stats(game_id):
-    # Simulated defensive stats for demonstration
-    defensive_stats = {
-        2: {
-            'Rams': {'Sacks': 4, 'Interceptions': 1, 'Forced Fumbles': 2},
-            'Lions': {'Sacks': 2, 'Interceptions': 2, 'Forced Fumbles': 1}
-        }
+def fetch_player_stats():
+    data = {
+        'Team': ['49ers', 'Jets'],
+        'Player': ['Brock Purdy', 'Aaron Rogers'],
+        'Position': ['QB', 'QB'],
+        'Yards': [320, 260],  # Example updated yardage
+        'Touchdowns': [2, 1]  # Example updated touchdowns
     }
-    return defensive_stats.get(game_id, None)
+    df_player_stats = pd.DataFrame(data)
+    return df_player_stats
 
-def fetch_game_data(game_id):
-    # Simulated game data for demonstration
-    game_data = {
-        2: {
-            'Historical': pd.DataFrame({
-                'Game': ['Rams vs Lions'] * 10,
-                'Home Team': ['Lions'] * 10,
-                'Away Team': ['Rams'] * 10,
-                'Home Score': [27] * 10,
-                'Away Score': [24] * 10
-            }),
-            'Live': pd.DataFrame({
-                'Team': ['Rams', 'Lions'],
-                'Current Score': [17, 20],  # Example updated scores
-                'Time of Possession': ['29:15', '30:45'],  # Example updated data
-                'Penalties': [4, 5]  # Example updated data
-            }),
-            'Player Stats': pd.DataFrame({
-                'Team': ['Rams'] * 5 + ['Lions'] * 5,
-                'Player': ['Matthew Stafford', 'Cam Akers', 'Cooper Kupp', 'Tutu Atwell', 'Tyler Higbee',
-                           'Jared Goff', 'D\'Andre Swift', 'Amon-Ra St. Brown', 'Josh Reynolds', 'Sam LaPorta'],
-                'Yards': [280, 75, 130, 55, 60, 300, 90, 110, 70, 50],
-                'Position': ['QB', 'RB', 'WR', 'WR', 'TE', 'QB', 'RB', 'WR', 'WR', 'TE']
-            }),
-            'Injury Reports': pd.DataFrame({
-                'Team': ['Rams'] * 2 + ['Lions'] * 2,
-                'Player': ['Tyler Higbee', 'Joe Noteboom', 'Aidan Hutchinson', 'Taylor Decker'],
-                'Status': ['Probable', 'Out', 'Questionable', 'Out']
-            }),
-            'Ball Last Year': pd.DataFrame({
-                'Team': ['Rams', 'Lions'],
-                'Ball Possessions Last Year': [55, 53]  # Example data
-            }),
-            'Short Week Impact': pd.DataFrame({
-                'Team': ['Rams', 'Lions'],
-                'Impact Score': [3, 5]  # Impact score out of 10 for short weeks
-            })
-        }
+def fetch_favorite_targets():
+    data = {
+        'Team': ['49ers', 'Jets'],
+        'Favorite Target': ['WR Deebo Samuel/TE George Kittle', 'WR Garrett Wilson/TE Tyler Conklin'],
+        'Target Stats (Yards)': [110, 95],  # Updated example yardage
+        'Target Stats (Receptions)': [9, 8],
+        'Target Stats (TDs)': [2, 1]
     }
+    df_favorite_targets = pd.DataFrame(data)
+    return df_favorite_targets
 
-    game = game_data.get(game_id, None)
-    if game:
-        weather_data = fetch_weather_and_grass_data(game_id)
-        defensive_stats = fetch_defensive_stats(game_id)
+def fetch_injury_reports():
+    data = {
+        'Team': ['49ers', 'Jets'],
+        'Player': ['George Kittle', 'Garrett Wilson'],
+        'Injury': ['Hamstring', 'Knee'],
+        'Status': ['Questionable', 'Questionable']
+    }
+    df_injury_reports = pd.DataFrame(data)
+    return df_injury_reports
 
-        # Fetch betting odds and predictions from external sources
-        betting_odds = {
-            'DraftKings': {'Rams': -110, 'Lions': -105, 'Over/Under': 48.5},
-            'FanDuel': {'Rams': -108, 'Lions': -112, 'Over/Under': 48.0},
-            'Vegas': {'Rams': -115, 'Lions': -110, 'Over/Under': 48.2}
-        }
+def advanced_stats():
+    data = {
+        'Team': ['49ers', 'Jets'],
+        'YPP': [5.9, 5.2],  # Updated example values
+        'EPA': [0.18, 0.11],
+        'YPC': [4.7, 4.0],
+        'Pass YPA': [8.0, 7.2],
+        'Pass EPA': [0.05, -0.02],
+        'Rush YPA': [4.6, 3.8]
+    }
+    df_advanced_stats = pd.DataFrame(data)
+    return df_advanced_stats
 
-        # Fetch player props predictions from Pine Sports
-        player_props = {
-            'Cooper Kupp': {'Yards': 110.5, 'Touchdowns': 1.5},
-            'Amon-Ra St. Brown': {'Yards': 90.5, 'Touchdowns': 1.0}
-        }
+def fetch_pff_data():
+    data = {
+        'Team': ['49ers', 'Jets'],
+        'Offensive Grade': [86, 80],
+        'Defensive Grade': [85, 83]
+    }
+    df_pff_data = pd.DataFrame(data)
+    return df_pff_data
 
-        # Fantasy Draft Decisions
-        fantasy_advice = {
-            'Best Players': 'Matthew Stafford, Jared Goff, Cooper Kupp, Amon-Ra St. Brown',
-            'Avoid Injured Players': 'Tyler Higbee, Aidan Hutchinson'
-        }
+def fetch_external_predictions():
+    data = {
+        'Game': ['49ers vs Jets'],
+        'Predicted Winner': ['49ers'],
+        'Predicted Margin': [10],  # Updated example prediction margin
+        'Total Over/Under': [45.5]  # Updated example over/under
+    }
+    df_predictions = pd.DataFrame(data)
+    return df_predictions
 
-        # Determine who gets the most targets, avoiding QBs
-        def most_targets(team, injured_players):
-            players = game['Player Stats'].query(f"Team == '{team}'")
-            if injured_players:
-                players = players[~players['Player'].isin(injured_players)]
-            # Exclude QBs from the consideration
-            players = players[~players['Position'].str.contains('QB')]
-            return players.sort_values(by='Yards', ascending=False).iloc[0]['Player'] if not players.empty else 'No available players'
+def fetch_defensive_stats():
+    data = {
+        'Team': ['49ers', 'Jets'],
+        'Sacks': [4, 3],
+        'Interceptions': [2, 1],
+        'Fumbles Recovered': [1, 1],
+        'Tackles for Loss': [6, 5],
+        'Passes Defended': [5, 4],
+        'Best Defensive Player': ['Nick Bosa', 'Quinnen Williams']
+    }
+    df_defensive_stats = pd.DataFrame(data)
+    return df_defensive_stats
 
-        injured_players_rams = game['Injury Reports'].query("Team == 'Rams' and Status != 'Probable'")['Player'].tolist()
-        injured_players_lions = game['Injury Reports'].query("Team == 'Lions' and Status != 'Probable'")['Player'].tolist()
+def calculate_injury_impact(injury_reports, player_stats, defensive_stats):
+    impact = {}
+    for index, row in injury_reports.iterrows():
+        if row['Status'] == 'Questionable':
+            impact[row['Player']] = -0.2  # Adjusted impact value
+    return impact
 
-        most_targets_rams = most_targets('Rams', injured_players_rams)
-        most_targets_lions = most_targets('Lions', injured_players_lions)
+def calculate_experience_impact(player_stats, defensive_stats):
+    experience_impact = {}
+    for index, row in player_stats.iterrows():
+        if 'Rookie' in row['Player'] or 'New Addition' in row['Player']:
+            experience_impact[row['Player']] = -0.1  # Example impact value for rookies/new additions
+    return experience_impact
 
-        # Incorporate weather, grass type, and short week into the analysis
-        performance_adjustments = {
-            'Weather': weather_data['Weather'],
-            'Grass Type': weather_data['Grass Type'],
-            'Travel Impact': weather_data['Travel Impact'],
-            'Short Week Impact': game['Short Week Impact']
-        }
+def predict_score(player_stats, defensive_stats, injury_impact, experience_impact):
+    # Base scores
+    niners_score = 24  # Updated base score for 49ers
+    jets_score = 17    # Updated base score for Jets
 
-        # Strategy Recommendations
-        strategies = {
-            'Offensive Coordinator Rams': 'Use short passes and screen plays to manage the Lions’ blitzing.',
-            'Defensive Coordinator Rams': 'Focus on pressuring Jared Goff and covering the Lions’ WRs.',
-            'Head Coach Rams': 'Maintain a run-pass balance and utilize play action.',
-            'Offensive Coordinator Lions': 'Exploit the Rams secondary with deep passes.',
-            'Defensive Coordinator Lions': 'Double-team Cooper Kupp and stop the Rams’ running game.',
-            'Head Coach Lions': 'Leverage home field advantage and aggressive defensive schemes.'
-        }
+    # Apply injury impact
+    for player, impact in injury_impact.items():
+        if player in player_stats['Player'].values:
+            team = player_stats[player_stats['Player'] == player]['Team'].values[0]
+            if team == '49ers':
+                niners_score += impact * 10  # Example calculation
+            else:
+                jets_score += impact * 10  # Example calculation
+        elif player in defensive_stats['Best Defensive Player'].values:
+            team = defensive_stats[defensive_stats['Best Defensive Player'] == player]['Team'].values[0]
+            if team == '49ers':
+                niners_score -= impact * 10  # Example calculation
+            else:
+                jets_score -= impact * 10  # Example calculation
 
-        return {
-            'Historical': game['Historical'],
-            'Live': game['Live'],
-            'Player Stats': game['Player Stats'],
-            'Injury Reports': game['Injury Reports'],
-            'Fantasy Draft Decisions': fantasy_advice,
-            'Most Targets Rams': most_targets_rams,
-            'Most Targets Lions': most_targets_lions,
-            'Weather Data': performance_adjustments,
-            'Betting Odds': betting_odds,
-            'Player Props': player_props,
-            'Ball Last Year': game['Ball Last Year'],
-            'Strategies': strategies
-        }
+    # Apply experience impact
+    for player, impact in experience_impact.items():
+        if player in player_stats['Player'].values:
+            team = player_stats[player_stats['Player'] == player]['Team'].values[0]
+            if team == '49ers':
+                niners_score += impact * 5  # Example calculation
+            else:
+                jets_score += impact * 5  # Example calculation
 
-    return None
+    # Introduce randomness
+    niners_score += random.randint(-3, 3)
+    jets_score += random.randint(-3, 3)
 
-# Example Usage:
-game_data = fetch_game_data(2)
-print(game_data['Historical'])
-print(game_data['Live'])
-print(game_data['Player Stats'])
-print(game_data['Injury Reports'])
-print("Fantasy Draft Decisions:")
-print(game_data['Fantasy Draft Decisions'])
-print("Most Targets Rams:", game_data['Most Targets Rams'])
-print("Most Targets Lions:", game_data['Most Targets Lions'])
-print("Weather Data:", game_data['Weather Data'])
-print("Betting Odds:", game_data['Betting Odds'])
-print("Player Props:", game_data['Player Props'])
-print("Ball Possessions Last Year:")
-print(game_data['Ball Last Year'])
-print("Strategies:")
-print(game_data['Strategies'])
+    return niners_score, jets_score
+
+def main():
+    print("Welcome to the NFL Game Prediction System")
+
+    # Wait for 1 minute
+    print("Waiting for 1 minute...")
+    time.sleep(60)
+
+    # Fetch data
+    historical_data = fetch_historical_game_data()
+    player_stats = fetch_player_stats()
+    favorite_targets = fetch_favorite_targets()
+    injury_reports = fetch_injury_reports()
+    advanced_stats_data = advanced_stats()
+    pff_data = fetch_pff_data()
+    external_predictions = fetch_external_predictions()
+    defensive_stats = fetch_defensive_stats()
+
+    # Calculate injury impact
+    injury_impact = calculate_injury_impact(injury_reports, player_stats, defensive_stats)
+
+    # Calculate experience impact
+    experience_impact = calculate_experience_impact(player_stats, defensive_stats)
+
+    # Predict score
+    niners_score, jets_score = predict_score(player_stats, defensive_stats, injury_impact, experience_impact)
+
+    # Display historical game data
+    print("\nHistorical Game Data:")
+    print(historical_data)
+
+    # Display player stats
+    print("\nPlayer Stats:")
+    print(player_stats)
+
+    # Display favorite targets
+    print("\nFavorite Targets and Stats:")
+    print(favorite_targets)
+
+    # Display injury reports
+    print("\nInjury Reports:")
+    print(injury_reports)
+
+    # Display advanced stats
+    print("\nAdvanced Stats:")
+    print(advanced_stats_data)
+
+    # Display PFF grades
+    print("\nPFF Data:")
+    print(pff_data)
+
+    # Display external predictions
+    print("\nExternal Predictions:")
+    print(external_predictions)
+
+    # Display defensive stats
+    print("\nDefensive Stats:")
+    print(defensive_stats)
+
+    # Display predicted score
+    print("\nPredicted Score:")
+    print(f"49ers: {niners_score}, Jets: {jets_score}")
+
+if __name__ == "__main__":
+    main()
