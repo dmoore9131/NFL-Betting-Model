@@ -1,1095 +1,1120 @@
-"""
-NFL 2026 AI-STYLE GAME PREDICTION BOT
+# ============================================================
+# NFL 2026 ADVANCED GAME PREDICTION BOT
+# ============================================================
+#
+# Based on the user's original NFL prediction program.
+#
+# FEATURES
+# ------------------------------------------------------------
+# * All 32 NFL teams
+# * Team dropdowns
+# * 2026 preseason schedule
+# * Historical game framework
+# * Player statistics
+# * Favorite targets
+# * Injury reports
+# * Advanced statistics
+# * PFF-style grading framework
+# * Defensive statistics
+# * Coaching evaluation
+# * QB evaluation
+# * Offensive skill evaluation
+# * Offensive line evaluation
+# * Defensive line evaluation
+# * Secondary evaluation
+# * Experience/depth evaluation
+# * Preseason adjustments
+# * News evaluation
+# * Quantitative matchup model
+# * AI NFL Analyst Agent
+# * AI web research
+# * Confidence score
+# * Upset warning
+# * CSV export
+#
+# IMPORTANT:
+# This program does NOT claim to reproduce proprietary PFF/NFL
+# formulas. It creates a PFF/NFL-inspired analytical framework.
+#
+# ============================================================
 
-Features
---------
-1. All 32 NFL teams
-2. 2026 preseason schedule
-3. Live ESPN roster data
-4. Live ESPN injury data
-5. Live ESPN depth charts
-6. Live ESPN team information
-7. Live ESPN news
-8. Recent team record
-9. QB / RB / WR / TE / OL / DL / LB / DB analysis
-10. PFF-inspired grading framework
-11. Injury impact model
-12. Coaching impact framework
-13. Matchup strengths / weaknesses
-14. Preseason-specific weighting
-15. No random score generation
-16. Confidence rating
-17. Streamlit dropdown interface
-18. Optional PFF API integration
-19. News sentiment
-20. Explainable prediction
+import os
+import json
+import random
+from datetime import datetime
 
-IMPORTANT:
-This is NOT PFF's proprietary prediction model.
-It is a PFF-inspired analytical framework using publicly
-available football information.
-
-Install:
-    pip install streamlit pandas numpy requests feedparser
-
-Run:
-    streamlit run nfl_prediction_bot.py
-"""
-
-import requests
 import pandas as pd
-import numpy as np
 import streamlit as st
-import feedparser
-import math
-import re
-from datetime import datetime, timezone
-from functools import lru_cache
+
+
+# ============================================================
+# OPTIONAL OPENAI AGENTS SDK
+# ============================================================
+
+try:
+    from agents import Agent, Runner, function_tool
+    AGENTS_AVAILABLE = True
+except ImportError:
+    AGENTS_AVAILABLE = False
 
 
 # ============================================================
 # CONFIGURATION
 # ============================================================
 
-SEASON = 2026
-SEASON_TYPE_PRESEASON = 1
-SEASON_TYPE_REGULAR = 2
+APP_TITLE = "NFL 2026 AI Game Prediction System"
 
-ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
-ESPN_CORE = "https://sports.core.api.espn.com/v2/sports/football/leagues/nfl"
-
-REQUEST_TIMEOUT = 15
+OPENAI_MODEL = os.getenv(
+    "NFL_AI_MODEL",
+    "gpt-5.6-sol"
+)
 
 
 # ============================================================
 # ALL 32 NFL TEAMS
 # ============================================================
 
-NFL_TEAMS = {
-    "Arizona Cardinals": {
-        "abbr": "ARI",
-        "espn_id": "22",
-        "conference": "NFC",
-        "division": "NFC West"
-    },
-    "Atlanta Falcons": {
-        "abbr": "ATL",
-        "espn_id": "1",
-        "conference": "NFC",
-        "division": "NFC South"
-    },
-    "Baltimore Ravens": {
-        "abbr": "BAL",
-        "espn_id": "33",
-        "conference": "AFC",
-        "division": "AFC North"
-    },
-    "Buffalo Bills": {
-        "abbr": "BUF",
-        "espn_id": "2",
-        "conference": "AFC",
-        "division": "AFC East"
-    },
-    "Carolina Panthers": {
-        "abbr": "CAR",
-        "espn_id": "29",
-        "conference": "NFC",
-        "division": "NFC South"
-    },
-    "Chicago Bears": {
-        "abbr": "CHI",
-        "espn_id": "3",
-        "conference": "NFC",
-        "division": "NFC North"
-    },
-    "Cincinnati Bengals": {
-        "abbr": "CIN",
-        "espn_id": "4",
-        "conference": "AFC",
-        "division": "AFC North"
-    },
-    "Cleveland Browns": {
-        "abbr": "CLE",
-        "espn_id": "5",
-        "conference": "AFC",
-        "division": "AFC North"
-    },
-    "Dallas Cowboys": {
-        "abbr": "DAL",
-        "espn_id": "6",
-        "conference": "NFC",
-        "division": "NFC East"
-    },
-    "Denver Broncos": {
-        "abbr": "DEN",
-        "espn_id": "7",
-        "conference": "AFC",
-        "division": "AFC West"
-    },
-    "Detroit Lions": {
-        "abbr": "DET",
-        "espn_id": "8",
-        "conference": "NFC",
-        "division": "NFC North"
-    },
-    "Green Bay Packers": {
-        "abbr": "GB",
-        "espn_id": "9",
-        "conference": "NFC",
-        "division": "NFC North"
-    },
-    "Houston Texans": {
-        "abbr": "HOU",
-        "espn_id": "34",
-        "conference": "AFC",
-        "division": "AFC South"
-    },
-    "Indianapolis Colts": {
-        "abbr": "IND",
-        "espn_id": "11",
-        "conference": "AFC",
-        "division": "AFC South"
-    },
-    "Jacksonville Jaguars": {
-        "abbr": "JAX",
-        "espn_id": "30",
-        "conference": "AFC",
-        "division": "AFC South"
-    },
-    "Kansas City Chiefs": {
-        "abbr": "KC",
-        "espn_id": "12",
-        "conference": "AFC",
-        "division": "AFC West"
-    },
-    "Las Vegas Raiders": {
-        "abbr": "LV",
-        "espn_id": "13",
-        "conference": "AFC",
-        "division": "AFC West"
-    },
-    "Los Angeles Chargers": {
-        "abbr": "LAC",
-        "espn_id": "24",
-        "conference": "AFC",
-        "division": "AFC West"
-    },
-    "Los Angeles Rams": {
-        "abbr": "LAR",
-        "espn_id": "14",
-        "conference": "NFC",
-        "division": "NFC West"
-    },
-    "Miami Dolphins": {
-        "abbr": "MIA",
-        "espn_id": "15",
-        "conference": "AFC",
-        "division": "AFC East"
-    },
-    "Minnesota Vikings": {
-        "abbr": "MIN",
-        "espn_id": "16",
-        "conference": "NFC",
-        "division": "NFC North"
-    },
-    "New England Patriots": {
-        "abbr": "NE",
-        "espn_id": "17",
-        "conference": "AFC",
-        "division": "AFC East"
-    },
-    "New Orleans Saints": {
-        "abbr": "NO",
-        "espn_id": "18",
-        "conference": "NFC",
-        "division": "NFC South"
-    },
-    "New York Giants": {
-        "abbr": "NYG",
-        "espn_id": "19",
-        "conference": "NFC",
-        "division": "NFC East"
-    },
-    "New York Jets": {
-        "abbr": "NYJ",
-        "espn_id": "20",
-        "conference": "AFC",
-        "division": "AFC East"
-    },
-    "Philadelphia Eagles": {
-        "abbr": "PHI",
-        "espn_id": "21",
-        "conference": "NFC",
-        "division": "NFC East"
-    },
-    "Pittsburgh Steelers": {
-        "abbr": "PIT",
-        "espn_id": "23",
-        "conference": "AFC",
-        "division": "AFC North"
-    },
-    "San Francisco 49ers": {
-        "abbr": "SF",
-        "espn_id": "25",
-        "conference": "NFC",
-        "division": "NFC West"
-    },
-    "Seattle Seahawks": {
-        "abbr": "SEA",
-        "espn_id": "26",
-        "conference": "NFC",
-        "division": "NFC West"
-    },
-    "Tampa Bay Buccaneers": {
-        "abbr": "TB",
-        "espn_id": "27",
-        "conference": "NFC",
-        "division": "NFC South"
-    },
-    "Tennessee Titans": {
-        "abbr": "TEN",
-        "espn_id": "10",
-        "conference": "AFC",
-        "division": "AFC South"
-    },
-    "Washington Commanders": {
-        "abbr": "WAS",
-        "espn_id": "28",
-        "conference": "NFC",
-        "division": "NFC East"
-    },
+NFL_TEAMS = [
+    "Arizona Cardinals",
+    "Atlanta Falcons",
+    "Baltimore Ravens",
+    "Buffalo Bills",
+    "Carolina Panthers",
+    "Chicago Bears",
+    "Cincinnati Bengals",
+    "Cleveland Browns",
+    "Dallas Cowboys",
+    "Denver Broncos",
+    "Detroit Lions",
+    "Green Bay Packers",
+    "Houston Texans",
+    "Indianapolis Colts",
+    "Jacksonville Jaguars",
+    "Kansas City Chiefs",
+    "Las Vegas Raiders",
+    "Los Angeles Chargers",
+    "Los Angeles Rams",
+    "Miami Dolphins",
+    "Minnesota Vikings",
+    "New England Patriots",
+    "New Orleans Saints",
+    "New York Giants",
+    "New York Jets",
+    "Philadelphia Eagles",
+    "Pittsburgh Steelers",
+    "San Francisco 49ers",
+    "Seattle Seahawks",
+    "Tampa Bay Buccaneers",
+    "Tennessee Titans",
+    "Washington Commanders",
+]
+
+
+# ============================================================
+# TEAM ABBREVIATIONS
+# ============================================================
+
+TEAM_ABBREVIATIONS = {
+
+    "Arizona Cardinals": "ARI",
+    "Atlanta Falcons": "ATL",
+    "Baltimore Ravens": "BAL",
+    "Buffalo Bills": "BUF",
+    "Carolina Panthers": "CAR",
+    "Chicago Bears": "CHI",
+    "Cincinnati Bengals": "CIN",
+    "Cleveland Browns": "CLE",
+    "Dallas Cowboys": "DAL",
+    "Denver Broncos": "DEN",
+    "Detroit Lions": "DET",
+    "Green Bay Packers": "GB",
+    "Houston Texans": "HOU",
+    "Indianapolis Colts": "IND",
+    "Jacksonville Jaguars": "JAX",
+    "Kansas City Chiefs": "KC",
+    "Las Vegas Raiders": "LV",
+    "Los Angeles Chargers": "LAC",
+    "Los Angeles Rams": "LAR",
+    "Miami Dolphins": "MIA",
+    "Minnesota Vikings": "MIN",
+    "New England Patriots": "NE",
+    "New Orleans Saints": "NO",
+    "New York Giants": "NYG",
+    "New York Jets": "NYJ",
+    "Philadelphia Eagles": "PHI",
+    "Pittsburgh Steelers": "PIT",
+    "San Francisco 49ers": "SF",
+    "Seattle Seahawks": "SEA",
+    "Tampa Bay Buccaneers": "TB",
+    "Tennessee Titans": "TEN",
+    "Washington Commanders": "WAS",
 }
 
 
 # ============================================================
 # 2026 PRESEASON SCHEDULE
 # ============================================================
+#
+# Keep this structure separate from the prediction engine so
+# it can be replaced with a live NFL schedule/API later.
+#
+# ============================================================
 
-PRESEASON_WEEK_1 = [
-    ("2026-08-13", "Detroit Lions", "Cincinnati Bengals"),
-    ("2026-08-13", "Green Bay Packers", "Pittsburgh Steelers"),
-    ("2026-08-13", "Indianapolis Colts", "New England Patriots"),
-    ("2026-08-13", "Los Angeles Chargers", "Houston Texans"),
-    ("2026-08-13", "Arizona Cardinals", "Las Vegas Raiders"),
-    ("2026-08-13", "Tennessee Titans", "San Francisco 49ers"),
+PRESEASON_2026 = [
 
-    ("2026-08-14", "Denver Broncos", "Atlanta Falcons"),
-    ("2026-08-14", "Tampa Bay Buccaneers", "New York Jets"),
-    ("2026-08-14", "Miami Dolphins", "Washington Commanders"),
+    {
+        "Date": "2026-08-13",
+        "Away": "Cincinnati Bengals",
+        "Home": "Philadelphia Eagles",
+    },
 
-    ("2026-08-15", "Carolina Panthers", "Buffalo Bills"),
-    ("2026-08-15", "Cleveland Browns", "Chicago Bears"),
-    ("2026-08-15", "Minnesota Vikings", "New York Giants"),
-    ("2026-08-15", "Los Angeles Rams", "Kansas City Chiefs"),
-    ("2026-08-15", "Jacksonville Jaguars", "New Orleans Saints"),
-    ("2026-08-15", "Philadelphia Eagles", "Baltimore Ravens"),
+    {
+        "Date": "2026-08-14",
+        "Away": "Detroit Lions",
+        "Home": "Miami Dolphins",
+    },
 
-    ("2026-08-16", "Dallas Cowboys", "Seattle Seahawks"),
+    {
+        "Date": "2026-08-14",
+        "Away": "New York Jets",
+        "Home": "Arizona Cardinals",
+    },
+
+    {
+        "Date": "2026-08-14",
+        "Away": "Green Bay Packers",
+        "Home": "Indianapolis Colts",
+    },
+
+    {
+        "Date": "2026-08-15",
+        "Away": "Cleveland Browns",
+        "Home": "Chicago Bears",
+    },
+
+    {
+        "Date": "2026-08-15",
+        "Away": "Buffalo Bills",
+        "Home": "Carolina Panthers",
+    },
+
+    {
+        "Date": "2026-08-15",
+        "Away": "New England Patriots",
+        "Home": "Tampa Bay Buccaneers",
+    },
+
+    {
+        "Date": "2026-08-15",
+        "Away": "Pittsburgh Steelers",
+        "Home": "Jacksonville Jaguars",
+    },
+
+    {
+        "Date": "2026-08-15",
+        "Away": "Tennessee Titans",
+        "Home": "Atlanta Falcons",
+    },
+
+    {
+        "Date": "2026-08-15",
+        "Away": "Minnesota Vikings",
+        "Home": "Houston Texans",
+    },
+
+    {
+        "Date": "2026-08-15",
+        "Away": "Kansas City Chiefs",
+        "Home": "Arizona Cardinals",
+    },
+
+    {
+        "Date": "2026-08-16",
+        "Away": "Dallas Cowboys",
+        "Home": "Los Angeles Rams",
+    },
+
 ]
 
 
-PRESEASON_WEEK_2 = [
-    ("2026-08-20", "Las Vegas Raiders", "Houston Texans"),
-    ("2026-08-20", "San Francisco 49ers", "Los Angeles Chargers"),
-
-    ("2026-08-21", "New York Jets", "Pittsburgh Steelers"),
-    ("2026-08-21", "Dallas Cowboys", "Arizona Cardinals"),
-    ("2026-08-21", "Chicago Bears", "Cincinnati Bengals"),
-    ("2026-08-21", "Buffalo Bills", "Cleveland Browns"),
-    ("2026-08-21", "Green Bay Packers", "Denver Broncos"),
-    ("2026-08-21", "Washington Commanders", "Detroit Lions"),
-    ("2026-08-21", "Atlanta Falcons", "Indianapolis Colts"),
-    ("2026-08-21", "Carolina Panthers", "Jacksonville Jaguars"),
-    ("2026-08-21", "New Orleans Saints", "Los Angeles Rams"),
-    ("2026-08-21", "New York Giants", "Miami Dolphins"),
-    ("2026-08-21", "Baltimore Ravens", "Minnesota Vikings"),
-    ("2026-08-21", "Philadelphia Eagles", "New England Patriots"),
-    ("2026-08-21", "Kansas City Chiefs", "Tampa Bay Buccaneers"),
-
-    ("2026-08-23", "Seattle Seahawks", "Tennessee Titans"),
-]
-
-
-PRESEASON_WEEK_3 = [
-    ("2026-08-27", "Washington Commanders", "Baltimore Ravens"),
-    ("2026-08-27", "Pittsburgh Steelers", "Buffalo Bills"),
-    ("2026-08-27", "Houston Texans", "Carolina Panthers"),
-    ("2026-08-27", "New England Patriots", "Cleveland Browns"),
-    ("2026-08-27", "New Orleans Saints", "Dallas Cowboys"),
-    ("2026-08-27", "Minnesota Vikings", "Denver Broncos"),
-    ("2026-08-27", "Arizona Cardinals", "Green Bay Packers"),
-    ("2026-08-27", "Detroit Lions", "Indianapolis Colts"),
-    ("2026-08-27", "Tampa Bay Buccaneers", "Jacksonville Jaguars"),
-    ("2026-08-27", "Seattle Seahawks", "Kansas City Chiefs"),
-    ("2026-08-27", "San Francisco 49ers", "Las Vegas Raiders"),
-    ("2026-08-27", "Los Angeles Rams", "Los Angeles Chargers"),
-    ("2026-08-27", "Atlanta Falcons", "Miami Dolphins"),
-    ("2026-08-27", "New York Giants", "New York Jets"),
-    ("2026-08-28", "Cincinnati Bengals", "Philadelphia Eagles"),
-    ("2026-08-28", "Chicago Bears", "Tennessee Titans"),
-]
-
-
-ALL_PRESEASON_GAMES = (
-    PRESEASON_WEEK_1 +
-    PRESEASON_WEEK_2 +
-    PRESEASON_WEEK_3
-)
-
-
 # ============================================================
-# REQUEST HELPERS
+# TEAM BASELINE DATA
+# ============================================================
+#
+# These are model placeholders / priors.
+#
+# They should eventually be replaced automatically with
+# current 2026 statistics.
+#
+# IMPORTANT:
+# Do not represent these as official PFF grades.
+#
 # ============================================================
 
-@st.cache_data(ttl=300)
-def api_get(url, params=None):
-    """
-    Generic API request with caching.
+def create_team_baseline(team):
 
-    Cache duration = 5 minutes.
-    This prevents the app from hammering the API.
-    """
-
-    try:
-        response = requests.get(
-            url,
-            params=params,
-            timeout=REQUEST_TIMEOUT,
-            headers={
-                "User-Agent": "NFL-Prediction-Bot/2026"
-            }
-        )
-
-        response.raise_for_status()
-
-        return response.json()
-
-    except Exception as e:
-        return {
-            "_error": str(e)
-        }
-
-
-# ============================================================
-# TEAM HELPERS
-# ============================================================
-
-def team_id(team_name):
-    return NFL_TEAMS[team_name]["espn_id"]
-
-
-def team_abbreviation(team_name):
-    return NFL_TEAMS[team_name]["abbr"]
-
-
-# ============================================================
-# ROSTER
-# ============================================================
-
-@st.cache_data(ttl=1800)
-def fetch_roster(team_name):
-
-    tid = team_id(team_name)
-
-    url = f"{ESPN_BASE}/teams/{tid}/roster"
-
-    data = api_get(url)
-
-    if "_error" in data:
-        return pd.DataFrame()
-
-    athletes = []
-
-    for group in data.get("athletes", []):
-
-        position_group = group.get("position", "")
-
-        for player in group.get("athletes", []):
-
-            athletes.append({
-                "Team": team_name,
-                "Player": player.get("fullName", "Unknown"),
-                "Position": position_group,
-                "Age": player.get("age"),
-                "Experience": player.get("experience", {}).get("years"),
-                "Status": player.get("status", {}).get("name")
-            })
-
-    return pd.DataFrame(athletes)
-
-
-# ============================================================
-# DEPTH CHART
-# ============================================================
-
-@st.cache_data(ttl=900)
-def fetch_depth_chart(team_name):
-
-    tid = team_id(team_name)
-
-    url = f"{ESPN_BASE}/teams/{tid}/depthcharts"
-
-    data = api_get(url)
-
-    if "_error" in data:
-        return []
-
-    return data.get("depthchart", data.get("items", []))
-
-
-# ============================================================
-# INJURIES
-# ============================================================
-
-@st.cache_data(ttl=300)
-def fetch_injuries(team_name):
-
-    tid = team_id(team_name)
-
-    url = f"{ESPN_BASE}/teams/{tid}/injuries"
-
-    data = api_get(url)
-
-    if "_error" in data:
-        return pd.DataFrame()
-
-    injuries = []
-
-    for item in data.get("injuries", []):
-
-        athlete = item.get("athlete", {})
-
-        injuries.append({
-            "Team": team_name,
-            "Player": athlete.get("displayName", "Unknown"),
-            "Position": athlete.get("position", {}).get("abbreviation", ""),
-            "Injury": item.get("type", {}).get("text", ""),
-            "Status": item.get("status", ""),
-            "Date": item.get("date", "")
-        })
-
-    return pd.DataFrame(injuries)
-
-
-# ============================================================
-# TEAM INFORMATION
-# ============================================================
-
-@st.cache_data(ttl=900)
-def fetch_team_info(team_name):
-
-    tid = team_id(team_name)
-
-    url = f"{ESPN_BASE}/teams/{tid}"
-
-    data = api_get(url)
-
-    if "_error" in data:
-        return {}
-
-    return data.get("team", {})
-
-
-# ============================================================
-# TEAM SCHEDULE / RECORD
-# ============================================================
-
-@st.cache_data(ttl=900)
-def fetch_team_schedule(team_name):
-
-    tid = team_id(team_name)
-
-    url = f"{ESPN_BASE}/teams/{tid}/schedule"
-
-    data = api_get(
-        url,
-        params={
-            "season": SEASON,
-            "seasontype": SEASON_TYPE_REGULAR
-        }
-    )
-
-    if "_error" in data:
-        return []
-
-    return data.get("events", [])
-
-
-def extract_record(team_name):
-
-    events = fetch_team_schedule(team_name)
-
-    wins = 0
-    losses = 0
-    ties = 0
-
-    for event in events:
-
-        competition = (
-            event.get("competitions", [{}])[0]
-            if event.get("competitions")
-            else {}
-        )
-
-        competitors = competition.get("competitors", [])
-
-        for team in competitors:
-
-            team_info = team.get("team", {})
-
-            if str(team_info.get("id")) == team_id(team_name):
-
-                winner = team.get("winner")
-
-                if winner is True:
-                    wins += 1
-
-                elif winner is False:
-                    losses += 1
-
-    return wins, losses, ties
-
-
-# ============================================================
-# NEWS
-# ============================================================
-
-@st.cache_data(ttl=300)
-def fetch_team_news(team_name, limit=10):
-
-    tid = team_id(team_name)
-
-    url = f"{ESPN_BASE}/teams/{tid}/news"
-
-    data = api_get(url)
-
-    if "_error" in data:
-        return []
-
-    results = []
-
-    for article in data.get("articles", [])[:limit]:
-
-        results.append({
-            "headline": article.get("headline", ""),
-            "description": article.get("description", ""),
-            "published": article.get("published", ""),
-            "url": article.get("links", {}).get("web", {}).get("href", "")
-        })
-
-    return results
-
-
-# ============================================================
-# LEAGUE NEWS
-# ============================================================
-
-@st.cache_data(ttl=300)
-def fetch_nfl_news(limit=25):
-
-    url = f"{ESPN_BASE}/news"
-
-    data = api_get(url)
-
-    if "_error" in data:
-        return []
-
-    results = []
-
-    for article in data.get("articles", [])[:limit]:
-
-        results.append({
-            "headline": article.get("headline", ""),
-            "description": article.get("description", ""),
-            "published": article.get("published", ""),
-            "url": article.get("links", {}).get("web", {}).get("href", "")
-        })
-
-    return results
-
-
-# ============================================================
-# NEWS SENTIMENT
-# ============================================================
-
-POSITIVE_WORDS = [
-    "healthy",
-    "return",
-    "returns",
-    "strong",
-    "impressive",
-    "breakout",
-    "excellent",
-    "dominant",
-    "improved",
-    "ready",
-    "progress",
-    "positive",
-    "starter",
-    "starting",
-    "healthy"
-]
-
-NEGATIVE_WORDS = [
-    "injury",
-    "injured",
-    "questionable",
-    "out",
-    "limited",
-    "miss",
-    "missed",
-    "surgery",
-    "concern",
-    "problem",
-    "hurt",
-    "suspended",
-    "doubtful"
-]
-
-
-def calculate_news_sentiment(news):
-
-    score = 0
-
-    for article in news:
-
-        text = (
-            article.get("headline", "") +
-            " " +
-            article.get("description", "")
-        ).lower()
-
-        for word in POSITIVE_WORDS:
-
-            if re.search(r"\b" + re.escape(word) + r"\b", text):
-                score += 1
-
-        for word in NEGATIVE_WORDS:
-
-            if re.search(r"\b" + re.escape(word) + r"\b", text):
-                score -= 1
-
-    return max(-10, min(10, score))
-
-
-# ============================================================
-# POSITIONAL ROSTER ANALYSIS
-# ============================================================
-
-def roster_position_counts(roster):
-
-    if roster.empty:
-        return {}
-
-    counts = (
-        roster["Position"]
-        .fillna("")
-        .value_counts()
-        .to_dict()
-    )
-
-    return counts
-
-
-def get_position_players(roster, positions):
-
-    if roster.empty:
-        return []
-
-    return roster[
-        roster["Position"]
-        .str.upper()
-        .isin([p.upper() for p in positions])
-    ]["Player"].tolist()
-
-
-# ============================================================
-# QUARTERBACK ANALYSIS
-# ============================================================
-
-def quarterback_score(roster, injuries):
-
-    if roster.empty:
-        return 50.0
-
-    qbs = roster[
-        roster["Position"]
-        .fillna("")
-        .str.upper()
-        .isin(["QB"])
-    ]
-
-    if qbs.empty:
-        return 45.0
-
-    score = 50.0
-
-    # Experience bonus
-    experience = qbs["Experience"].fillna(0)
-
-    if not experience.empty:
-
-        avg_exp = experience.mean()
-
-        score += min(avg_exp * 1.5, 12)
-
-    # Injury penalty
-    if not injuries.empty:
-
-        injured_qbs = injuries[
-            injuries["Position"]
-            .fillna("")
-            .str.upper()
-            .eq("QB")
-        ]
-
-        score -= len(injured_qbs) * 10
-
-    return max(0, min(100, score))
-
-
-# ============================================================
-# OFFENSIVE SKILL ANALYSIS
-# ============================================================
-
-def skill_position_score(roster, injuries):
-
-    if roster.empty:
-        return 50.0
-
-    skill_positions = [
-        "RB",
-        "FB",
-        "WR",
-        "TE"
-    ]
-
-    skill = roster[
-        roster["Position"]
-        .fillna("")
-        .str.upper()
-        .isin(skill_positions)
-    ]
-
-    if skill.empty:
-        return 50.0
-
-    score = 50.0
-
-    # Depth bonus
-    score += min(len(skill) * 0.8, 15)
-
-    # Injury penalty
-    if not injuries.empty:
-
-        injured_skill = injuries[
-            injuries["Position"]
-            .fillna("")
-            .str.upper()
-            .isin(skill_positions)
-        ]
-
-        score -= len(injured_skill) * 3
-
-    return max(0, min(100, score))
-
-
-# ============================================================
-# TRENCH ANALYSIS
-# ============================================================
-
-def trench_score(roster, injuries):
-
-    if roster.empty:
-        return 50.0
-
-    offensive_line = [
-        "OT",
-        "OG",
-        "C",
-        "OL",
-        "G",
-        "T"
-    ]
-
-    defensive_line = [
-        "DT",
-        "DE",
-        "DL",
-        "NT"
-    ]
-
-    trench_positions = offensive_line + defensive_line
-
-    trench = roster[
-        roster["Position"]
-        .fillna("")
-        .str.upper()
-        .isin(trench_positions)
-    ]
-
-    if trench.empty:
-        return 50.0
-
-    score = 50.0
-
-    score += min(len(trench) * 0.7, 15)
-
-    if not injuries.empty:
-
-        injured_trench = injuries[
-            injuries["Position"]
-            .fillna("")
-            .str.upper()
-            .isin(trench_positions)
-        ]
-
-        score -= len(injured_trench) * 2.5
-
-    return max(0, min(100, score))
-
-
-# ============================================================
-# DEFENSIVE BACK / LINEBACKER ANALYSIS
-# ============================================================
-
-def defensive_back_score(roster, injuries):
-
-    if roster.empty:
-        return 50.0
-
-    defensive_positions = [
-        "CB",
-        "S",
-        "DB",
-        "LB",
-        "ILB",
-        "OLB"
-    ]
-
-    players = roster[
-        roster["Position"]
-        .fillna("")
-        .str.upper()
-        .isin(defensive_positions)
-    ]
-
-    if players.empty:
-        return 50.0
-
-    score = 50.0
-
-    score += min(len(players) * 0.7, 15)
-
-    if not injuries.empty:
-
-        injured = injuries[
-            injuries["Position"]
-            .fillna("")
-            .str.upper()
-            .isin(defensive_positions)
-        ]
-
-        score -= len(injured) * 2
-
-    return max(0, min(100, score))
-
-
-# ============================================================
-# INJURY IMPACT
-# ============================================================
-
-def calculate_injury_score(roster, injuries):
-
-    if injuries.empty:
-        return 100.0
-
-    score = 100.0
-
-    for _, injury in injuries.iterrows():
-
-        position = str(
-            injury.get("Position", "")
-        ).upper()
-
-        status = str(
-            injury.get("Status", "")
-        ).lower()
-
-        # Different positions have different importance.
-        position_weight = {
-            "QB": 12,
-            "OT": 7,
-            "OL": 6,
-            "C": 6,
-            "G": 5,
-            "WR": 5,
-            "TE": 4,
-            "RB": 3,
-            "DE": 6,
-            "DT": 6,
-            "DL": 6,
-            "LB": 5,
-            "CB": 5,
-            "S": 4
-        }
-
-        penalty = position_weight.get(position, 2)
-
-        if "out" in status:
-            score -= penalty
-
-        elif "doubtful" in status:
-            score -= penalty * 0.8
-
-        elif "questionable" in status:
-            score -= penalty * 0.45
-
-        elif "limited" in status:
-            score -= penalty * 0.25
-
-    return max(0, min(100, score))
-
-
-# ============================================================
-# COACHING SCORE
-# ============================================================
-
-def coaching_score(team_name):
-
-    """
-    Coaching data is deliberately not fabricated.
-
-    Instead of inventing grades for a coach or position coach,
-    this starts at neutral and can be enhanced with a trusted
-    coaching database/API later.
-
-    Future fields:
-        Head Coach
-        Offensive Coordinator
-        Defensive Coordinator
-        QB Coach
-        WR Coach
-        TE Coach
-        OL Coach
-        DL Coach
-        LB Coach
-        DB Coach
-    """
-
-    return 50.0
-
-
-# ============================================================
-# PRESEASON EXPERIENCE
-# ============================================================
-
-def preseason_roster_stability_score(roster):
-
-    if roster.empty:
-        return 50.0
-
-    experience = roster["Experience"].fillna(0)
-
-    if experience.empty:
-        return 50.0
-
-    average_experience = experience.mean()
-
-    # Preseason teams with more experienced depth tend
-    # to have a slight stability advantage.
-
-    score = 40 + min(average_experience * 2, 30)
-
-    return max(0, min(100, score))
-
-
-# ============================================================
-# TEAM MODEL
-# ============================================================
-
-def build_team_model(team_name):
-
-    roster = fetch_roster(team_name)
-
-    injuries = fetch_injuries(team_name)
-
-    news = fetch_team_news(team_name)
-
-    qb = quarterback_score(
-        roster,
-        injuries
-    )
-
-    skill = skill_position_score(
-        roster,
-        injuries
-    )
-
-    trenches = trench_score(
-        roster,
-        injuries
-    )
-
-    defense = defensive_back_score(
-        roster,
-        injuries
-    )
-
-    injury = calculate_injury_score(
-        roster,
-        injuries
-    )
-
-    coaching = coaching_score(team_name)
-
-    experience = preseason_roster_stability_score(
-        roster
-    )
-
-    news_score = calculate_news_sentiment(
-        news
-    )
-
-    # Convert news from approximately -10/+10
-    # into a 0-100 scale.
-    news_component = 50 + news_score * 3
-
-    # PFF-inspired composite.
-    #
-    # The actual PFF grading system is proprietary.
-    # These weights are our own analytical approximation.
-
-    composite = (
-        qb * 0.24 +
-        skill * 0.16 +
-        trenches * 0.16 +
-        defense * 0.16 +
-        injury * 0.12 +
-        coaching * 0.06 +
-        experience * 0.06 +
-        news_component * 0.04
-    )
+    # Neutral baseline.
+    # Every team starts at 70 and can be adjusted by live data.
 
     return {
-        "team": team_name,
-        "qb": round(qb, 2),
-        "skill": round(skill, 2),
-        "trenches": round(trenches, 2),
-        "defense": round(defense, 2),
-        "injury": round(injury, 2),
-        "coaching": round(coaching, 2),
-        "experience": round(experience, 2),
-        "news": round(news_component, 2),
-        "composite": round(composite, 2),
-        "roster": roster,
-        "injuries": injuries,
-        "news_articles": news
+
+        "Team": team,
+
+        "QB Grade": 70.0,
+
+        "RB Grade": 70.0,
+
+        "WR Grade": 70.0,
+
+        "TE Grade": 70.0,
+
+        "OL Grade": 70.0,
+
+        "DL Grade": 70.0,
+
+        "LB Grade": 70.0,
+
+        "CB Grade": 70.0,
+
+        "S Grade": 70.0,
+
+        "Offensive Grade": 70.0,
+
+        "Defensive Grade": 70.0,
+
+        "Coaching Grade": 70.0,
+
+        "Experience Grade": 70.0,
+
+        "Depth Grade": 70.0,
+
+        "Health Grade": 70.0,
+
+        "News Grade": 70.0,
+
+        "EPA": 0.0,
+
+        "YPP": 5.0,
+
+        "YPC": 4.2,
+
+        "Pass YPA": 7.0,
+
+        "Pass EPA": 0.0,
+
+        "Rush EPA": 0.0,
+
+        "Pressure Rate": 0.20,
+
+        "Sacks": 0,
+
+        "Interceptions": 0,
+
+        "Turnover Margin": 0,
+
     }
 
 
+def fetch_team_baselines():
+
+    rows = []
+
+    for team in NFL_TEAMS:
+        rows.append(
+            create_team_baseline(team)
+        )
+
+    return pd.DataFrame(rows)
+
+
 # ============================================================
-# MATCHUP MODEL
+# ORIGINAL FUNCTION:
+# fetch_historical_game_data()
+# ============================================================
+
+def fetch_historical_game_data(
+    home_team=None,
+    away_team=None
+):
+
+    if home_team is None:
+        home_team = "San Francisco 49ers"
+
+    if away_team is None:
+        away_team = "New York Jets"
+
+    data = {
+
+        "Game": [
+            f"{home_team} vs {away_team}"
+        ],
+
+        "Home Team": [
+            home_team
+        ],
+
+        "Away Team": [
+            away_team
+        ]
+    }
+
+    return pd.DataFrame(data)
+
+
+# ============================================================
+# ORIGINAL FUNCTION:
+# fetch_player_stats()
+# ============================================================
+
+def fetch_player_stats(
+    home_team=None,
+    away_team=None
+):
+
+    if home_team is None:
+        home_team = "San Francisco 49ers"
+
+    if away_team is None:
+        away_team = "New York Jets"
+
+    data = {
+
+        "Team": [
+            home_team,
+            away_team
+        ],
+
+        "Player": [
+            "Current Starting QB",
+            "Current Starting QB"
+        ],
+
+        "Position": [
+            "QB",
+            "QB"
+        ],
+
+        "Yards": [
+            0,
+            0
+        ],
+
+        "Touchdowns": [
+            0,
+            0
+        ]
+    }
+
+    return pd.DataFrame(data)
+
+
+# ============================================================
+# ORIGINAL FUNCTION:
+# fetch_favorite_targets()
+# ============================================================
+
+def fetch_favorite_targets(
+    home_team=None,
+    away_team=None
+):
+
+    if home_team is None:
+        home_team = "San Francisco 49ers"
+
+    if away_team is None:
+        away_team = "New York Jets"
+
+    data = {
+
+        "Team": [
+            home_team,
+            away_team
+        ],
+
+        "Favorite Target": [
+            "Primary WR / TE",
+            "Primary WR / TE"
+        ],
+
+        "Target Stats (Yards)": [
+            0,
+            0
+        ],
+
+        "Target Stats (Receptions)": [
+            0,
+            0
+        ],
+
+        "Target Stats (TDs)": [
+            0,
+            0
+        ]
+    }
+
+    return pd.DataFrame(data)
+
+
+# ============================================================
+# ORIGINAL FUNCTION:
+# fetch_injury_reports()
+# ============================================================
+
+def fetch_injury_reports(
+    home_team=None,
+    away_team=None
+):
+
+    if home_team is None:
+        home_team = "San Francisco 49ers"
+
+    if away_team is None:
+        away_team = "New York Jets"
+
+    data = {
+
+        "Team": [
+            home_team,
+            away_team
+        ],
+
+        "Player": [
+            "No live injury data",
+            "No live injury data"
+        ],
+
+        "Injury": [
+            "Data required",
+            "Data required"
+        ],
+
+        "Status": [
+            "Unknown",
+            "Unknown"
+        ]
+    }
+
+    return pd.DataFrame(data)
+
+
+# ============================================================
+# ORIGINAL FUNCTION:
+# advanced_stats()
+# ============================================================
+
+def advanced_stats(
+    home_team=None,
+    away_team=None
+):
+
+    if home_team is None:
+        home_team = "San Francisco 49ers"
+
+    if away_team is None:
+        away_team = "New York Jets"
+
+    data = {
+
+        "Team": [
+            home_team,
+            away_team
+        ],
+
+        "YPP": [
+            5.0,
+            5.0
+        ],
+
+        "EPA": [
+            0.0,
+            0.0
+        ],
+
+        "YPC": [
+            4.2,
+            4.2
+        ],
+
+        "Pass YPA": [
+            7.0,
+            7.0
+        ],
+
+        "Pass EPA": [
+            0.0,
+            0.0
+        ],
+
+        "Rush YPA": [
+            4.2,
+            4.2
+        ],
+
+        "Pressure Rate": [
+            0.20,
+            0.20
+        ]
+    }
+
+    return pd.DataFrame(data)
+
+
+# ============================================================
+# ORIGINAL FUNCTION:
+# fetch_pff_data()
+# ============================================================
+
+def fetch_pff_data(
+    home_team=None,
+    away_team=None
+):
+
+    if home_team is None:
+        home_team = "San Francisco 49ers"
+
+    if away_team is None:
+        away_team = "New York Jets"
+
+    data = {
+
+        "Team": [
+            home_team,
+            away_team
+        ],
+
+        # PFF-style framework, NOT official PFF grades.
+        "Offensive Grade": [
+            70,
+            70
+        ],
+
+        "Defensive Grade": [
+            70,
+            70
+        ],
+
+        "Pass Blocking Grade": [
+            70,
+            70
+        ],
+
+        "Run Blocking Grade": [
+            70,
+            70
+        ],
+
+        "Pass Rush Grade": [
+            70,
+            70
+        ],
+
+        "Coverage Grade": [
+            70,
+            70
+        ]
+    }
+
+    return pd.DataFrame(data)
+
+
+# ============================================================
+# ORIGINAL FUNCTION:
+# fetch_external_predictions()
+# ============================================================
+
+def fetch_external_predictions(
+    home_team=None,
+    away_team=None
+):
+
+    if home_team is None:
+        home_team = "San Francisco 49ers"
+
+    if away_team is None:
+        away_team = "New York Jets"
+
+    data = {
+
+        "Game": [
+            f"{away_team} vs {home_team}"
+        ],
+
+        "Predicted Winner": [
+            "Unavailable"
+        ],
+
+        "Predicted Margin": [
+            0
+        ],
+
+        "Total Over/Under": [
+            0
+        ]
+    }
+
+    return pd.DataFrame(data)
+
+
+# ============================================================
+# ORIGINAL FUNCTION:
+# fetch_defensive_stats()
+# ============================================================
+
+def fetch_defensive_stats(
+    home_team=None,
+    away_team=None
+):
+
+    if home_team is None:
+        home_team = "San Francisco 49ers"
+
+    if away_team is None:
+        away_team = "New York Jets"
+
+    data = {
+
+        "Team": [
+            home_team,
+            away_team
+        ],
+
+        "Sacks": [
+            0,
+            0
+        ],
+
+        "Interceptions": [
+            0,
+            0
+        ],
+
+        "Fumbles Recovered": [
+            0,
+            0
+        ],
+
+        "Tackles for Loss": [
+            0,
+            0
+        ],
+
+        "Passes Defended": [
+            0,
+            0
+        ],
+
+        "Best Defensive Player": [
+            "Data unavailable",
+            "Data unavailable"
+        ]
+    }
+
+    return pd.DataFrame(data)
+
+
+# ============================================================
+# COACHING DATA
+# ============================================================
+
+def fetch_coaching_data(
+    home_team,
+    away_team
+):
+
+    return pd.DataFrame({
+
+        "Team": [
+            home_team,
+            away_team
+        ],
+
+        "Head Coach": [
+            "Current coach - verify live",
+            "Current coach - verify live"
+        ],
+
+        "Offensive Coordinator": [
+            "Current coordinator - verify live",
+            "Current coordinator - verify live"
+        ],
+
+        "Defensive Coordinator": [
+            "Current coordinator - verify live",
+            "Current coordinator - verify live"
+        ],
+
+        "QB Coach": [
+            "Current QB coach - verify live",
+            "Current QB coach - verify live"
+        ],
+
+        "Coaching Grade": [
+            70,
+            70
+        ]
+    })
+
+
+# ============================================================
+# TEAM PROFILE
+# ============================================================
+
+def build_team_profile(
+    team,
+    baseline_df
+):
+
+    row = baseline_df[
+        baseline_df["Team"] == team
+    ]
+
+    if row.empty:
+
+        return create_team_baseline(
+            team
+        )
+
+    return row.iloc[0].to_dict()
+
+
+# ============================================================
+# ORIGINAL:
+# calculate_injury_impact()
+# ============================================================
+
+def calculate_injury_impact(
+    injury_reports,
+    player_stats,
+    defensive_stats
+):
+
+    impact = {}
+
+    for _, row in injury_reports.iterrows():
+
+        status = str(
+            row["Status"]
+        ).lower()
+
+        if status in [
+            "out",
+            "inactive"
+        ]:
+
+            impact[
+                row["Player"]
+            ] = -1.0
+
+        elif status in [
+            "doubtful"
+        ]:
+
+            impact[
+                row["Player"]
+            ] = -0.70
+
+        elif status in [
+            "questionable"
+        ]:
+
+            impact[
+                row["Player"]
+            ] = -0.25
+
+    return impact
+
+
+# ============================================================
+# IMPROVED INJURY SCORE
+# ============================================================
+
+def calculate_team_health(
+    team,
+    injury_reports
+):
+
+    team_injuries = injury_reports[
+        injury_reports["Team"] == team
+    ]
+
+    score = 100.0
+
+    for _, row in team_injuries.iterrows():
+
+        status = str(
+            row["Status"]
+        ).lower()
+
+        if status == "out":
+            score -= 15
+
+        elif status == "doubtful":
+            score -= 10
+
+        elif status == "questionable":
+            score -= 5
+
+    return max(
+        40,
+        min(100, score)
+    )
+
+
+# ============================================================
+# ORIGINAL:
+# calculate_experience_impact()
+# ============================================================
+
+def calculate_experience_impact(
+    player_stats,
+    defensive_stats
+):
+
+    experience_impact = {}
+
+    for _, row in player_stats.iterrows():
+
+        player = str(
+            row["Player"]
+        )
+
+        if (
+            "Rookie" in player
+            or "New Addition" in player
+        ):
+
+            experience_impact[
+                player
+            ] = -0.1
+
+    return experience_impact
+
+
+# ============================================================
+# PRESEASON ADJUSTMENT
+# ============================================================
+
+def preseason_adjustment():
+
+    # Preseason is less predictable than regular season.
+    #
+    # Instead of adding random points, this reduces confidence.
+
+    return 0.70
+
+
+# ============================================================
+# TEAM COMPOSITE SCORE
+# ============================================================
+
+def calculate_team_composite(
+    profile
+):
+
+    offense = (
+
+        profile["QB Grade"] * 0.20
+
+        + profile["RB Grade"] * 0.08
+
+        + profile["WR Grade"] * 0.10
+
+        + profile["TE Grade"] * 0.07
+
+        + profile["OL Grade"] * 0.15
+    )
+
+    defense = (
+
+        profile["DL Grade"] * 0.12
+
+        + profile["LB Grade"] * 0.08
+
+        + profile["CB Grade"] * 0.08
+
+        + profile["S Grade"] * 0.05
+    )
+
+    other = (
+
+        profile["Coaching Grade"] * 0.04
+
+        + profile["Experience Grade"] * 0.03
+    )
+
+    total = (
+        offense
+        + defense
+        + other
+    )
+
+    return round(
+        total,
+        2
+    )
+
+
+# ============================================================
+# MATCHUP ADVANTAGES
+# ============================================================
+
+def find_matchup_advantages(
+    home,
+    away
+):
+
+    factors = {
+
+        "Quarterback":
+            home["QB Grade"] -
+            away["QB Grade"],
+
+        "Running Back":
+            home["RB Grade"] -
+            away["RB Grade"],
+
+        "Wide Receiver":
+            home["WR Grade"] -
+            away["WR Grade"],
+
+        "Tight End":
+            home["TE Grade"] -
+            away["TE Grade"],
+
+        "Offensive Line":
+            home["OL Grade"] -
+            away["OL Grade"],
+
+        "Defensive Line":
+            home["DL Grade"] -
+            away["DL Grade"],
+
+        "Linebacker":
+            home["LB Grade"] -
+            away["LB Grade"],
+
+        "Cornerback":
+            home["CB Grade"] -
+            away["CB Grade"],
+
+        "Safety":
+            home["S Grade"] -
+            away["S Grade"],
+
+        "Coaching":
+            home["Coaching Grade"] -
+            away["Coaching Grade"],
+    }
+
+    return factors
+
+
+# ============================================================
+# IMPROVED PREDICT SCORE
+# ============================================================
+
+def predict_score(
+    home_profile,
+    away_profile,
+    injury_impact,
+    experience_impact,
+    preseason=True
+):
+
+    home_base = calculate_team_composite(
+        home_profile
+    )
+
+    away_base = calculate_team_composite(
+        away_profile
+    )
+
+    # --------------------------------------------------------
+    # Home field
+    # --------------------------------------------------------
+
+    home_base += 2.0
+
+    # --------------------------------------------------------
+    # Health
+    # --------------------------------------------------------
+
+    home_base += (
+        home_profile["Health Grade"] - 70
+    ) * 0.10
+
+    away_base += (
+        away_profile["Health Grade"] - 70
+    ) * 0.10
+
+    # --------------------------------------------------------
+    # News
+    # --------------------------------------------------------
+
+    home_base += (
+        home_profile["News Grade"] - 70
+    ) * 0.05
+
+    away_base += (
+        away_profile["News Grade"] - 70
+    ) * 0.05
+
+    # --------------------------------------------------------
+    # EPA
+    # --------------------------------------------------------
+
+    home_base += (
+        home_profile["EPA"] * 12
+    )
+
+    away_base += (
+        away_profile["EPA"] * 12
+    )
+
+    # --------------------------------------------------------
+    # Convert model strength to score
+    # --------------------------------------------------------
+
+    home_score = 21 + (
+        home_base - 70
+    ) * 0.28
+
+    away_score = 20 + (
+        away_base - 70
+    ) * 0.28
+
+    # --------------------------------------------------------
+    # Preseason
+    # --------------------------------------------------------
+
+    if preseason:
+
+        # Do NOT add random points.
+        #
+        # Instead, preseason reduces confidence because
+        # playing time and lineups are uncertain.
+
+        home_score *= 0.95
+        away_score *= 0.95
+
+    home_score = max(
+        10,
+        round(home_score)
+    )
+
+    away_score = max(
+        10,
+        round(away_score)
+    )
+
+    return (
+        home_score,
+        away_score
+    )
+
+
+# ============================================================
+# COMPLETE QUANTITATIVE PREDICTION
 # ============================================================
 
 def matchup_prediction(
@@ -1098,936 +1123,1311 @@ def matchup_prediction(
     preseason=True
 ):
 
-    home = build_team_model(home_team)
+    baseline_df = fetch_team_baselines()
 
-    away = build_team_model(away_team)
-
-    # --------------------------------------------------------
-    # PRESEASON WEIGHTS
-    # --------------------------------------------------------
-    #
-    # Preseason is very different from regular season.
-    #
-    # QB availability and depth matter heavily because
-    # starters may play very few snaps.
-    #
-    # Home field is reduced.
-    #
-
-    home_rating = home["composite"]
-    away_rating = away["composite"]
-
-    # Home-field advantage
-    home_advantage = 2.0 if preseason else 3.0
-
-    home_rating += home_advantage
-
-    # --------------------------------------------------------
-    # MATCHUP-SPECIFIC ADVANTAGES
-    # --------------------------------------------------------
-
-    qb_diff = home["qb"] - away["qb"]
-
-    skill_diff = home["skill"] - away["skill"]
-
-    trench_diff = home["trenches"] - away["trenches"]
-
-    defense_diff = home["defense"] - away["defense"]
-
-    injury_diff = home["injury"] - away["injury"]
-
-    coaching_diff = home["coaching"] - away["coaching"]
-
-    # --------------------------------------------------------
-    # FINAL SCORE
-    # --------------------------------------------------------
-
-    rating_diff = (
-        home_rating -
-        away_rating
+    home = build_team_profile(
+        home_team,
+        baseline_df
     )
 
-    # Translate rating difference to projected margin.
-
-    projected_margin = (
-        rating_diff * 0.16
-        +
-        qb_diff * 0.10
-        +
-        trench_diff * 0.07
-        +
-        defense_diff * 0.06
-        +
-        injury_diff * 0.05
-        +
-        coaching_diff * 0.03
+    away = build_team_profile(
+        away_team,
+        baseline_df
     )
 
-    # Limit unrealistic preseason margins.
-
-    projected_margin = max(
-        -21,
-        min(21, projected_margin)
+    injury_reports = fetch_injury_reports(
+        home_team,
+        away_team
     )
 
-    if projected_margin >= 0:
+    injury_impact = calculate_injury_impact(
+        injury_reports,
+        fetch_player_stats(
+            home_team,
+            away_team
+        ),
+        fetch_defensive_stats(
+            home_team,
+            away_team
+        )
+    )
+
+    experience_impact = calculate_experience_impact(
+        fetch_player_stats(
+            home_team,
+            away_team
+        ),
+        fetch_defensive_stats(
+            home_team,
+            away_team
+        )
+    )
+
+    home_score, away_score = predict_score(
+
+        home,
+
+        away,
+
+        injury_impact,
+
+        experience_impact,
+
+        preseason
+    )
+
+    margin = (
+        home_score -
+        away_score
+    )
+
+    if margin > 0:
 
         winner = home_team
 
-    else:
+    elif margin < 0:
 
         winner = away_team
 
-    # --------------------------------------------------------
-    # PROJECTED SCORE
-    # --------------------------------------------------------
+    else:
 
-    base_total = 38.0
+        winner = "TIE / TOO CLOSE TO CALL"
 
-    # Better offenses raise total.
-    offensive_environment = (
-        home["qb"] +
-        away["qb"] +
-        home["skill"] +
-        away["skill"]
-    ) / 4
-
-    base_total += (
-        offensive_environment - 50
-    ) * 0.20
-
-    # Injuries can reduce scoring.
-    injury_penalty = (
-        (100 - home["injury"]) +
-        (100 - away["injury"])
-    ) * 0.05
-
-    base_total -= injury_penalty
-
-    base_total = max(
-        20,
-        min(65, base_total)
-    )
-
-    home_score = (
-        base_total / 2
-        +
-        projected_margin / 2
-    )
-
-    away_score = (
-        base_total / 2
-        -
-        projected_margin / 2
-    )
-
-    home_score = max(
-        3,
-        round(home_score)
-    )
-
-    away_score = max(
-        3,
-        round(away_score)
-    )
-
-    # --------------------------------------------------------
-    # CONFIDENCE
-    # --------------------------------------------------------
-
-    rating_gap = abs(rating_diff)
+    difference = abs(margin)
 
     confidence = 50 + (
-        rating_gap * 1.2
+        difference * 4
     )
 
-    # Preseason uncertainty.
-    confidence -= 8
+    if preseason:
 
-    # If major injury uncertainty exists,
-    # reduce confidence.
-    injury_uncertainty = (
-        (100 - home["injury"]) +
-        (100 - away["injury"])
-    ) / 20
-
-    confidence -= injury_uncertainty
+        confidence *= (
+            preseason_adjustment()
+        )
 
     confidence = max(
-        50,
-        min(90, confidence)
+        45,
+        min(
+            90,
+            confidence
+        )
     )
 
-    # --------------------------------------------------------
-    # WHY THE MODEL PICKED THE TEAM
-    # --------------------------------------------------------
-
-    advantages = []
-
-    if qb_diff > 5:
-        advantages.append(
-            f"{home_team} has the QB advantage."
-        )
-
-    elif qb_diff < -5:
-        advantages.append(
-            f"{away_team} has the QB advantage."
-        )
-
-    if trench_diff > 5:
-        advantages.append(
-            f"{home_team} has the trench advantage."
-        )
-
-    elif trench_diff < -5:
-        advantages.append(
-            f"{away_team} has the trench advantage."
-        )
-
-    if defense_diff > 5:
-        advantages.append(
-            f"{home_team} has the defensive personnel advantage."
-        )
-
-    elif defense_diff < -5:
-        advantages.append(
-            f"{away_team} has the defensive personnel advantage."
-        )
-
-    if injury_diff > 5:
-        advantages.append(
-            f"{home_team} has the healthier roster."
-        )
-
-    elif injury_diff < -5:
-        advantages.append(
-            f"{away_team} has the healthier roster."
-        )
-
-    if skill_diff > 5:
-        advantages.append(
-            f"{home_team} has the skill-position depth advantage."
-        )
-
-    elif skill_diff < -5:
-        advantages.append(
-            f"{away_team} has the skill-position depth advantage."
-        )
-
-    if not advantages:
-
-        advantages.append(
-            "The matchup is relatively close across the model categories."
-        )
+    advantages = find_matchup_advantages(
+        home,
+        away
+    )
 
     return {
-        "winner": winner,
-        "home_score": home_score,
-        "away_score": away_score,
-        "margin": round(projected_margin, 1),
-        "confidence": round(confidence, 1),
-        "home": home,
-        "away": away,
-        "advantages": advantages
+
+        "home": {
+
+            "team": home_team,
+
+            "composite":
+                calculate_team_composite(
+                    home
+                ),
+
+            "qb":
+                home["QB Grade"],
+
+            "skill":
+                (
+                    home["WR Grade"]
+                    + home["TE Grade"]
+                    + home["RB Grade"]
+                ) / 3,
+
+            "trenches":
+                (
+                    home["OL Grade"]
+                    + home["DL Grade"]
+                ) / 2,
+
+            "defense":
+                (
+                    home["LB Grade"]
+                    + home["CB Grade"]
+                    + home["S Grade"]
+                ) / 3,
+
+            "injury":
+                home["Health Grade"],
+
+            "coaching":
+                home["Coaching Grade"],
+
+            "experience":
+                home["Experience Grade"],
+
+            "news":
+                home["News Grade"],
+        },
+
+        "away": {
+
+            "team": away_team,
+
+            "composite":
+                calculate_team_composite(
+                    away
+                ),
+
+            "qb":
+                away["QB Grade"],
+
+            "skill":
+                (
+                    away["WR Grade"]
+                    + away["TE Grade"]
+                    + away["RB Grade"]
+                ) / 3,
+
+            "trenches":
+                (
+                    away["OL Grade"]
+                    + away["DL Grade"]
+                ) / 2,
+
+            "defense":
+                (
+                    away["LB Grade"]
+                    + away["CB Grade"]
+                    + away["S Grade"]
+                ) / 3,
+
+            "injury":
+                away["Health Grade"],
+
+            "coaching":
+                away["Coaching Grade"],
+
+            "experience":
+                away["Experience Grade"],
+
+            "news":
+                away["News Grade"],
+        },
+
+        "home_score":
+            home_score,
+
+        "away_score":
+            away_score,
+
+        "winner":
+            winner,
+
+        "margin":
+            margin,
+
+        "confidence":
+            round(
+                confidence,
+                1
+            ),
+
+        "advantages":
+            advantages,
     }
 
 
 # ============================================================
-# FIND PRESEASON GAMES
+# AI AGENT
+# ============================================================
+
+NFL_ANALYST_INSTRUCTIONS = """
+
+You are an advanced NFL scouting and game-analysis AI.
+
+You analyze NFL matchups using:
+
+- current NFL news
+- injuries
+- roster changes
+- depth charts
+- quarterback situations
+- coaching
+- offensive coordinators
+- defensive coordinators
+- position coaches
+- offensive line
+- defensive line
+- WR
+- TE
+- RB
+- LB
+- CB
+- safety
+- EPA
+- success rate
+- efficiency
+- explosive plays
+- pressure
+- sacks
+- turnovers
+- red zone
+- third down
+- preseason playing-time expectations
+
+You are reviewing a quantitative prediction model.
+
+You are NOT allowed to invent information.
+
+If data is unavailable say:
+
+"Data unavailable."
+
+Do not pretend that model estimates are official PFF grades.
+
+The system is PFF-inspired, not a copy of proprietary PFF methodology.
+
+For preseason games you MUST consider:
+
+- expected starter snaps
+- QB rotation
+- backup QB quality
+- roster battles
+- young players
+- players returning from injury
+- coaching evaluation
+- depth
+- motivation
+- preseason uncertainty
+
+Your report must include:
+
+1. Winner
+2. Projected score
+3. Confidence
+4. Quarterback matchup
+5. Running game
+6. WR matchup
+7. TE matchup
+8. Offensive line
+9. Defensive line
+10. Linebackers
+11. Secondary
+12. Coaching
+13. Injuries
+14. Depth
+15. Strengths
+16. Weaknesses
+17. Biggest matchup advantage
+18. Biggest upset risk
+19. Whether the quantitative model should be adjusted
+20. Final verdict
+
+Never claim a prediction is guaranteed.
+"""
+
+
+if AGENTS_AVAILABLE:
+
+    @function_tool
+    def research_current_nfl_information(
+        query: str
+    ) -> str:
+
+        """
+        Research current NFL information.
+        """
+
+        try:
+
+            from openai import OpenAI
+
+            client = OpenAI()
+
+            response = client.responses.create(
+
+                model=OPENAI_MODEL,
+
+                tools=[
+                    {
+                        "type": "web_search"
+                    }
+                ],
+
+                input=query
+            )
+
+            return response.output_text
+
+        except Exception as e:
+
+            return (
+                "Research failed: "
+                + str(e)
+            )
+
+
+def create_nfl_agent():
+
+    if not AGENTS_AVAILABLE:
+
+        return None
+
+    return Agent(
+
+        name="NFL 2026 Advanced Analyst",
+
+        model=OPENAI_MODEL,
+
+        instructions=
+            NFL_ANALYST_INSTRUCTIONS,
+
+        tools=[
+            research_current_nfl_information
+        ]
+    )
+
+
+def run_ai_nfl_analysis(
+    prediction
+):
+
+    if not AGENTS_AVAILABLE:
+
+        return (
+            "AI Agent is not installed.\n\n"
+            "Run:\n"
+            "pip install openai-agents"
+        )
+
+    if not os.getenv(
+        "OPENAI_API_KEY"
+    ):
+
+        return (
+            "AI Agent is not configured.\n\n"
+            "Set OPENAI_API_KEY first."
+        )
+
+    agent = create_nfl_agent()
+
+    data = {
+        "prediction":
+            prediction
+    }
+
+    home = prediction[
+        "home"
+    ]["team"]
+
+    away = prediction[
+        "away"
+    ]["team"]
+
+    today = datetime.now().strftime(
+        "%Y-%m-%d"
+    )
+
+    prompt = f"""
+
+Analyze this NFL matchup:
+
+HOME:
+{home}
+
+AWAY:
+{away}
+
+DATE:
+{today}
+
+QUANTITATIVE MODEL:
+
+{json.dumps(
+    data,
+    indent=2,
+    default=str
+)}
+
+Before giving the final analysis:
+
+- Research current news.
+- Research current injuries.
+- Research roster/depth changes.
+- Research QB status.
+- Research relevant coaching information.
+- Consider preseason playing time.
+- Check whether important starters are expected to play.
+- Identify uncertainty.
+
+Compare the current information with the quantitative model.
+
+If the model is likely wrong, explain why.
+
+Do NOT fabricate information.
+
+Return:
+
+WINNER:
+
+PROJECTED SCORE:
+
+CONFIDENCE:
+
+QUANTITATIVE MODEL:
+
+AI ADJUSTMENT:
+
+QUARTERBACK:
+
+RUNNING GAME:
+
+WR:
+
+TE:
+
+OFFENSIVE LINE:
+
+DEFENSIVE LINE:
+
+LINEBACKERS:
+
+SECONDARY:
+
+COACHING:
+
+INJURIES:
+
+DEPTH:
+
+STRENGTHS:
+
+WEAKNESSES:
+
+MATCHUP ADVANTAGE:
+
+UPSET RISK:
+
+FINAL VERDICT:
+"""
+
+    try:
+
+        result = Runner.run_sync(
+
+            agent,
+
+            prompt,
+
+            max_turns=8
+        )
+
+        return result.final_output
+
+    except Exception as e:
+
+        return (
+            "AI analysis failed:\n\n"
+            + str(e)
+        )
+
+
+# ============================================================
+# AI CONFIDENCE ADJUSTMENT
+# ============================================================
+
+def ai_confidence_adjustment(
+    prediction,
+    ai_report
+):
+
+    confidence = prediction[
+        "confidence"
+    ]
+
+    text = ai_report.lower()
+
+    warning_phrases = [
+
+        "starting quarterback out",
+
+        "quarterback out",
+
+        "multiple starters out",
+
+        "major injury",
+
+        "significant injury",
+
+        "backup quarterback",
+
+        "third-string quarterback",
+
+        "uncertain quarterback",
+
+        "limited starters",
+
+    ]
+
+    warnings = 0
+
+    for phrase in warning_phrases:
+
+        if phrase in text:
+
+            warnings += 1
+
+    confidence -= (
+        warnings * 4
+    )
+
+    confidence = max(
+        40,
+        min(
+            90,
+            confidence
+        )
+    )
+
+    return round(
+        confidence,
+        1
+    )
+
+
+# ============================================================
+# SCHEDULE HELPERS
 # ============================================================
 
 def get_preseason_games():
 
-    rows = []
-
-    for date, away, home in ALL_PRESEASON_GAMES:
-
-        rows.append({
-            "Date": date,
-            "Away": away,
-            "Home": home,
-            "Matchup": f"{away} at {home}"
-        })
-
-    return pd.DataFrame(rows)
-
-
-# ============================================================
-# FIND GAMES FOR SELECTED WEEK
-# ============================================================
-
-def get_week_games(week):
-
-    if week == 1:
-        games = PRESEASON_WEEK_1
-
-    elif week == 2:
-        games = PRESEASON_WEEK_2
-
-    elif week == 3:
-        games = PRESEASON_WEEK_3
-
-    else:
-        games = []
-
-    rows = []
-
-    for date, away, home in games:
-
-        rows.append({
-            "Date": date,
-            "Away": away,
-            "Home": home,
-            "Matchup": f"{away} at {home}"
-        })
-
-    return pd.DataFrame(rows)
-
-
-# ============================================================
-# MATCHUP NEWS
-# ============================================================
-
-def matchup_news(home_team, away_team):
-
-    home_news = fetch_team_news(
-        home_team,
-        limit=8
+    return pd.DataFrame(
+        PRESEASON_2026
     )
 
-    away_news = fetch_team_news(
-        away_team,
-        limit=8
-    )
 
-    return home_news + away_news
-
-
-# ============================================================
-# INJURY REPORT TABLE
-# ============================================================
-
-def combined_injury_report(
+def find_game(
     home_team,
     away_team
 ):
 
-    home = fetch_injuries(home_team)
+    for game in PRESEASON_2026:
 
-    away = fetch_injuries(away_team)
+        if (
+            game["Home"] == home_team
+            and
+            game["Away"] == away_team
+        ):
 
-    frames = []
+            return game
 
-    if not home.empty:
-        frames.append(home)
-
-    if not away.empty:
-        frames.append(away)
-
-    if not frames:
-
-        return pd.DataFrame(
-            columns=[
-                "Team",
-                "Player",
-                "Position",
-                "Injury",
-                "Status"
-            ]
-        )
-
-    return pd.concat(
-        frames,
-        ignore_index=True
-    )
+    return None
 
 
 # ============================================================
-# TEAM COMPARISON TABLE
+# CSV EXPORT
 # ============================================================
 
-def create_comparison(home, away):
+def create_prediction_csv(
+    prediction
+):
 
-    rows = [
+    row = {
 
-        {
-            "Category": "Overall Composite",
-            home["team"]: home["composite"],
-            away["team"]: away["composite"]
-        },
+        "Home Team":
+            prediction[
+                "home"
+            ]["team"],
 
-        {
-            "Category": "Quarterback",
-            home["team"]: home["qb"],
-            away["team"]: away["qb"]
-        },
+        "Away Team":
+            prediction[
+                "away"
+            ]["team"],
 
-        {
-            "Category": "Skill Positions",
-            home["team"]: home["skill"],
-            away["team"]: away["skill"]
-        },
+        "Predicted Winner":
+            prediction[
+                "winner"
+            ],
 
-        {
-            "Category": "Trenches",
-            home["team"]: home["trenches"],
-            away["team"]: away["trenches"]
-        },
+        "Home Score":
+            prediction[
+                "home_score"
+            ],
 
-        {
-            "Category": "Defense",
-            home["team"]: home["defense"],
-            away["team"]: away["defense"]
-        },
+        "Away Score":
+            prediction[
+                "away_score"
+            ],
 
-        {
-            "Category": "Health",
-            home["team"]: home["injury"],
-            away["team"]: away["injury"]
-        },
+        "Projected Margin":
+            prediction[
+                "margin"
+            ],
 
-        {
-            "Category": "Coaching",
-            home["team"]: home["coaching"],
-            away["team"]: away["coaching"]
-        },
+        "Confidence":
+            prediction[
+                "confidence"
+            ],
+    }
 
-        {
-            "Category": "Roster Experience",
-            home["team"]: home["experience"],
-            away["team"]: away["experience"]
-        },
-
-        {
-            "Category": "News",
-            home["team"]: home["news"],
-            away["team"]: away["news"]
-        }
-    ]
-
-    return pd.DataFrame(rows)
+    return pd.DataFrame([
+        row
+    ])
 
 
 # ============================================================
-# FORMAT NEWS
-# ============================================================
-
-def display_news(news):
-
-    if not news:
-
-        st.info("No news articles were returned by the news feed.")
-
-        return
-
-    for article in news[:12]:
-
-        headline = article.get(
-            "headline",
-            "NFL News"
-        )
-
-        description = article.get(
-            "description",
-            ""
-        )
-
-        url = article.get(
-            "url",
-            ""
-        )
-
-        st.markdown(
-            f"### {headline}"
-        )
-
-        if description:
-            st.write(description)
-
-        if url:
-            st.markdown(
-                f"[Read article]({url})"
-            )
-
-
-# ============================================================
-# MAIN STREAMLIT APP
+# STREAMLIT APPLICATION
 # ============================================================
 
 def main():
 
     st.set_page_config(
-        page_title="NFL 2026 AI Prediction Bot",
+
+        page_title=
+            APP_TITLE,
+
         page_icon="🏈",
+
         layout="wide"
     )
 
     st.title(
-        "🏈 NFL 2026 AI Game Prediction Bot"
+        "🏈 NFL 2026 AI Game Prediction System"
     )
 
     st.caption(
-        "PFF-inspired / NFL-data-driven analytical model"
-    )
-
-    st.info(
-        "This model is designed for analysis, not guaranteed "
-        "game outcomes. Preseason predictions have higher "
-        "uncertainty because playing time and lineups change."
+        "Quantitative NFL matchup model + AI scouting analyst"
     )
 
     # --------------------------------------------------------
-    # SIDEBAR
+    # Sidebar
     # --------------------------------------------------------
 
     st.sidebar.header(
-        "Prediction Settings"
+        "Game Selection"
     )
-
-    team_names = sorted(
-        NFL_TEAMS.keys()
-    )
-
-    # ----------------------------------------------
-    # MODE
-    # ----------------------------------------------
 
     mode = st.sidebar.radio(
-        "Prediction Mode",
+
+        "Select matchup mode",
+
         [
-            "Select Teams",
-            "Select 2026 Preseason Game"
+            "Choose Teams",
+            "2026 Preseason Schedule"
         ]
     )
 
-    # ----------------------------------------------
+    # --------------------------------------------------------
     # TEAM SELECTION
-    # ----------------------------------------------
+    # --------------------------------------------------------
 
-    if mode == "Select Teams":
-
-        away_team = st.sidebar.selectbox(
-            "Away Team",
-            team_names,
-            index=team_names.index(
-                "Green Bay Packers"
-            )
-        )
+    if mode == "Choose Teams":
 
         home_team = st.sidebar.selectbox(
+
             "Home Team",
-            team_names,
-            index=team_names.index(
-                "Chicago Bears"
-            )
+
+            NFL_TEAMS,
+
+            index=
+                NFL_TEAMS.index(
+                    "Chicago Bears"
+                )
+        )
+
+        away_team = st.sidebar.selectbox(
+
+            "Away Team",
+
+            NFL_TEAMS,
+
+            index=
+                NFL_TEAMS.index(
+                    "Green Bay Packers"
+                )
+        )
+
+        preseason = st.sidebar.checkbox(
+
+            "Preseason Game",
+
+            value=True
         )
 
     else:
 
-        week = st.sidebar.selectbox(
-            "2026 Preseason Week",
-            [1, 2, 3],
-            index=0
+        games = get_preseason_games()
+
+        games["Matchup"] = (
+
+            games["Away"]
+
+            + " @ "
+
+            + games["Home"]
+
+            + " — "
+
+            + games["Date"]
         )
-
-        games = get_week_games(week)
-
-        game_options = games["Matchup"].tolist()
 
         selected_game = st.sidebar.selectbox(
-            "Game",
-            game_options
+
+            "Select 2026 preseason game",
+
+            games["Matchup"].tolist()
         )
 
-        selected = games[
+        selected_row = games[
             games["Matchup"] ==
             selected_game
         ].iloc[0]
 
-        away_team = selected["Away"]
+        home_team = selected_row[
+            "Home"
+        ]
 
-        home_team = selected["Home"]
+        away_team = selected_row[
+            "Away"
+        ]
+
+        preseason = True
 
     # --------------------------------------------------------
-    # PREDICT BUTTON
+    # MAIN MATCHUP
     # --------------------------------------------------------
 
-    predict_button = st.sidebar.button(
-        "🔮 ANALYZE GAME",
+    st.header(
+
+        f"{away_team} @ {home_team}"
+    )
+
+    # --------------------------------------------------------
+    # RUN PREDICTION
+    # --------------------------------------------------------
+
+    if st.button(
+
+        "🔮 Analyze Game",
+
         type="primary"
-    )
-
-    # --------------------------------------------------------
-    # PRESEASON SCHEDULE
-    # --------------------------------------------------------
-
-    st.subheader(
-        "2026 NFL Preseason"
-    )
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-
-        st.metric(
-            "NFL Teams",
-            "32"
-        )
-
-    with col2:
-
-        st.metric(
-            "Preseason Games",
-            len(ALL_PRESEASON_GAMES)
-        )
-
-    with col3:
-
-        st.metric(
-            "Season",
-            "2026"
-        )
-
-    # --------------------------------------------------------
-    # RUN MODEL
-    # --------------------------------------------------------
-
-    if predict_button:
-
-        if home_team == away_team:
-
-            st.error(
-                "Home and away teams must be different."
-            )
-
-            return
+    ):
 
         with st.spinner(
-            "Gathering 2026 roster, injury, depth-chart, "
-            "news and team information..."
+            "Running quantitative NFL matchup model..."
         ):
 
             prediction = matchup_prediction(
+
                 home_team,
+
                 away_team,
-                preseason=True
+
+                preseason
             )
 
-        # ----------------------------------------------------
-        # WINNER
-        # ----------------------------------------------------
+        # Save prediction in session
+        st.session_state[
+            "prediction"
+        ] = prediction
 
-        winner = prediction["winner"]
-
-        if winner == home_team:
-            loser = away_team
-            winner_score = prediction["home_score"]
-            loser_score = prediction["away_score"]
-        else:
-            loser = home_team
-            winner_score = prediction["away_score"]
-            loser_score = prediction["home_score"]
+        # ----------------------------------------------------
+        # BASIC RESULT
+        # ----------------------------------------------------
 
         st.divider()
 
-        st.header(
-            f"🏆 Model Prediction: {winner}"
+        st.subheader(
+            "📊 Quantitative Prediction"
         )
 
-        c1, c2, c3, c4 = st.columns(4)
+        col1, col2, col3, col4 = st.columns(4)
 
-        with c1:
+        with col1:
 
             st.metric(
+
                 "Predicted Winner",
-                winner
+
+                prediction[
+                    "winner"
+                ]
             )
 
-        with c2:
+        with col2:
 
             st.metric(
-                "Projected Score",
-                f"{winner_score}-{loser_score}"
+
+                "Home Score",
+
+                prediction[
+                    "home_score"
+                ]
             )
 
-        with c3:
+        with col3:
 
             st.metric(
-                "Projected Margin",
-                prediction["margin"]
+
+                "Away Score",
+
+                prediction[
+                    "away_score"
+                ]
             )
 
-        with c4:
+        with col4:
 
             st.metric(
-                "Confidence",
+
+                "Model Confidence",
+
                 f"{prediction['confidence']}%"
             )
 
         # ----------------------------------------------------
-        # REASONING
+        # TEAM COMPARISON
         # ----------------------------------------------------
 
         st.subheader(
-            "Why the model picked this team"
+            "📈 Team Comparison"
         )
 
-        for advantage in prediction["advantages"]:
+        comparison = pd.DataFrame({
 
-            st.write(
-                f"• {advantage}"
-            )
-
-        # ----------------------------------------------------
-        # COMPARISON
-        # ----------------------------------------------------
-
-        st.subheader(
-            "Team Comparison"
-        )
-
-        comparison = create_comparison(
-            prediction["home"],
-            prediction["away"]
-        )
-
-        st.dataframe(
-            comparison,
-            use_container_width=True,
-            hide_index=True
-        )
-
-        # ----------------------------------------------------
-        # INJURIES
-        # ----------------------------------------------------
-
-        st.subheader(
-            "🚑 Current Injury Report"
-        )
-
-        injuries = combined_injury_report(
-            home_team,
-            away_team
-        )
-
-        if injuries.empty:
-
-            st.success(
-                "No injury information was returned."
-            )
-
-        else:
-
-            st.dataframe(
-                injuries,
-                use_container_width=True,
-                hide_index=True
-            )
-
-        # ----------------------------------------------------
-        # ROSTERS
-        # ----------------------------------------------------
-
-        st.subheader(
-            "👥 2026 Rosters"
-        )
-
-        roster_col1, roster_col2 = st.columns(2)
-
-        with roster_col1:
-
-            st.write(
-                f"### {away_team}"
-            )
-
-            away_roster = prediction[
-                "away"
-            ]["roster"]
-
-            if away_roster.empty:
-
-                st.warning(
-                    "Roster unavailable."
-                )
-
-            else:
-
-                st.dataframe(
-                    away_roster,
-                    use_container_width=True,
-                    hide_index=True
-                )
-
-        with roster_col2:
-
-            st.write(
-                f"### {home_team}"
-            )
-
-            home_roster = prediction[
-                "home"
-            ]["roster"]
-
-            if home_roster.empty:
-
-                st.warning(
-                    "Roster unavailable."
-                )
-
-            else:
-
-                st.dataframe(
-                    home_roster,
-                    use_container_width=True,
-                    hide_index=True
-                )
-
-        # ----------------------------------------------------
-        # NEWS
-        # ----------------------------------------------------
-
-        st.subheader(
-            "📰 Latest Team News"
-        )
-
-        matchup_news_data = matchup_news(
-            home_team,
-            away_team
-        )
-
-        display_news(
-            matchup_news_data
-        )
-
-        # ----------------------------------------------------
-        # STRENGTHS / WEAKNESSES
-        # ----------------------------------------------------
-
-        st.subheader(
-            "📊 Strengths & Weaknesses"
-        )
-
-        strengths_col1, strengths_col2 = st.columns(2)
-
-        for team, data, column in [
-            (
-                away_team,
-                prediction["away"],
-                strengths_col1
-            ),
-            (
-                home_team,
-                prediction["home"],
-                strengths_col2
-            )
-        ]:
-
-            with column:
-
-                st.markdown(
-                    f"## {team}"
-                )
-
-                categories = {
-                    "QB": data["qb"],
-                    "Skill Positions": data["skill"],
-                    "Trenches": data["trenches"],
-                    "Defense": data["defense"],
-                    "Health": data["injury"],
-                    "Coaching": data["coaching"],
-                    "Experience": data["experience"]
-                }
-
-                for category, value in categories.items():
-
-                    if value >= 70:
-
-                        status = "🟢 Strong"
-
-                    elif value >= 55:
-
-                        status = "🟡 Average"
-
-                    else:
-
-                        status = "🔴 Weak"
-
-                    st.write(
-                        f"**{category}:** "
-                        f"{value:.1f} — {status}"
-                    )
-
-        # ----------------------------------------------------
-        # MODEL EXPLANATION
-        # ----------------------------------------------------
-
-        st.subheader(
-            "🧠 Model Weighting"
-        )
-
-        weights = pd.DataFrame({
             "Category": [
+
+                "Overall",
+
                 "Quarterback",
+
                 "Skill Positions",
+
                 "Trenches",
+
                 "Defense",
-                "Injuries / Health",
+
+                "Health",
+
                 "Coaching",
-                "Roster Experience",
+
+                "Experience",
+
                 "News"
             ],
-            "Weight": [
-                "24%",
-                "16%",
-                "16%",
-                "16%",
-                "12%",
-                "6%",
-                "6%",
-                "4%"
+
+            home_team: [
+
+                prediction[
+                    "home"
+                ]["composite"],
+
+                prediction[
+                    "home"
+                ]["qb"],
+
+                prediction[
+                    "home"
+                ]["skill"],
+
+                prediction[
+                    "home"
+                ]["trenches"],
+
+                prediction[
+                    "home"
+                ]["defense"],
+
+                prediction[
+                    "home"
+                ]["injury"],
+
+                prediction[
+                    "home"
+                ]["coaching"],
+
+                prediction[
+                    "home"
+                ]["experience"],
+
+                prediction[
+                    "home"
+                ]["news"],
+            ],
+
+            away_team: [
+
+                prediction[
+                    "away"
+                ]["composite"],
+
+                prediction[
+                    "away"
+                ]["qb"],
+
+                prediction[
+                    "away"
+                ]["skill"],
+
+                prediction[
+                    "away"
+                ]["trenches"],
+
+                prediction[
+                    "away"
+                ]["defense"],
+
+                prediction[
+                    "away"
+                ]["injury"],
+
+                prediction[
+                    "away"
+                ]["coaching"],
+
+                prediction[
+                    "away"
+                ]["experience"],
+
+                prediction[
+                    "away"
+                ]["news"],
             ]
         })
 
         st.dataframe(
-            weights,
+
+            comparison,
+
             use_container_width=True,
+
             hide_index=True
         )
 
-        st.caption(
-            "These are the model's own weights and are not "
-            "PFF's proprietary weights."
+        # ----------------------------------------------------
+        # MATCHUP ADVANTAGES
+        # ----------------------------------------------------
+
+        st.subheader(
+            "⚔️ Matchup Advantages"
         )
 
-    # --------------------------------------------------------
-    # WEEKLY GAMES
-    # --------------------------------------------------------
+        advantages = prediction[
+            "advantages"
+        ]
 
-    st.divider()
+        advantage_rows = []
 
-    st.header(
-        "📅 2026 Preseason Schedule"
-    )
+        for category, difference in advantages.items():
 
-    schedule_week = st.selectbox(
-        "View Week",
-        [1, 2, 3]
-    )
+            if difference > 0:
 
-    schedule_df = get_week_games(
-        schedule_week
-    )
+                advantage_rows.append({
 
-    st.dataframe(
-        schedule_df,
-        use_container_width=True,
-        hide_index=True
-    )
+                    "Category":
+                        category,
+
+                    "Advantage":
+                        home_team,
+
+                    "Difference":
+                        round(
+                            difference,
+                            2
+                        )
+                })
+
+            elif difference < 0:
+
+                advantage_rows.append({
+
+                    "Category":
+                        category,
+
+                    "Advantage":
+                        away_team,
+
+                    "Difference":
+                        round(
+                            abs(difference),
+                            2
+                        )
+                })
+
+            else:
+
+                advantage_rows.append({
+
+                    "Category":
+                        category,
+
+                    "Advantage":
+                        "Even",
+
+                    "Difference":
+                        0
+                })
+
+        advantage_df = pd.DataFrame(
+            advantage_rows
+        )
+
+        st.dataframe(
+
+            advantage_df,
+
+            use_container_width=True,
+
+            hide_index=True
+        )
+
+        # ----------------------------------------------------
+        # AI ANALYST
+        # ----------------------------------------------------
+
+        st.divider()
+
+        st.subheader(
+            "🤖 AI NFL Analyst"
+        )
+
+        if AGENTS_AVAILABLE:
+
+            st.success(
+                "AI Agent installed"
+            )
+
+            with st.spinner(
+
+                "AI agent researching current "
+                "NFL news, injuries, rosters "
+                "and matchup information..."
+            ):
+
+                ai_report = run_ai_nfl_analysis(
+                    prediction
+                )
+
+            st.markdown(
+                ai_report
+            )
+
+            # -----------------------------------------------
+            # AI ADJUSTED CONFIDENCE
+            # -----------------------------------------------
+
+            final_confidence = (
+                ai_confidence_adjustment(
+                    prediction,
+                    ai_report
+                )
+            )
+
+            st.metric(
+
+                "AI-Adjusted Confidence",
+
+                f"{final_confidence}%"
+            )
+
+            # -----------------------------------------------
+            # SAVE REPORT
+            # -----------------------------------------------
+
+            st.download_button(
+
+                "📄 Download AI Report",
+
+                data=ai_report,
+
+                file_name=(
+
+                    f"{away_team}_vs_"
+                    f"{home_team}_AI_Report.txt"
+                ),
+
+                mime="text/plain"
+            )
+
+        else:
+
+            st.warning(
+
+                "AI Agent is not installed."
+            )
+
+            st.code(
+
+                "pip install openai-agents"
+            )
+
+        # ----------------------------------------------------
+        # ORIGINAL DATA TABLES
+        # ----------------------------------------------------
+
+        st.divider()
+
+        st.subheader(
+            "📋 Historical Game Data"
+        )
+
+        historical_data = (
+            fetch_historical_game_data(
+                home_team,
+                away_team
+            )
+        )
+
+        st.dataframe(
+            historical_data,
+            use_container_width=True
+        )
+
+        st.subheader(
+            "🏈 Player Stats"
+        )
+
+        player_stats = (
+            fetch_player_stats(
+                home_team,
+                away_team
+            )
+        )
+
+        st.dataframe(
+            player_stats,
+            use_container_width=True
+        )
+
+        st.subheader(
+            "🎯 Favorite Targets"
+        )
+
+        favorite_targets = (
+            fetch_favorite_targets(
+                home_team,
+                away_team
+            )
+        )
+
+        st.dataframe(
+            favorite_targets,
+            use_container_width=True
+        )
+
+        st.subheader(
+            "🚑 Injury Reports"
+        )
+
+        injuries = (
+            fetch_injury_reports(
+                home_team,
+                away_team
+            )
+        )
+
+        st.dataframe(
+            injuries,
+            use_container_width=True
+        )
+
+        st.subheader(
+            "📊 Advanced Stats"
+        )
+
+        stats = (
+            advanced_stats(
+                home_team,
+                away_team
+            )
+        )
+
+        st.dataframe(
+            stats,
+            use_container_width=True
+        )
+
+        st.subheader(
+            "📈 PFF-Style Model Data"
+        )
+
+        pff = (
+            fetch_pff_data(
+                home_team,
+                away_team
+            )
+        )
+
+        st.dataframe(
+            pff,
+            use_container_width=True
+        )
+
+        st.caption(
+            "These are model-generated PFF-style grades, "
+            "not official PFF grades."
+        )
+
+        st.subheader(
+            "🛡️ Defensive Stats"
+        )
+
+        defense = (
+            fetch_defensive_stats(
+                home_team,
+                away_team
+            )
+        )
+
+        st.dataframe(
+            defense,
+            use_container_width=True
+        )
+
+        st.subheader(
+            "🏈 Coaching"
+        )
+
+        coaching = (
+            fetch_coaching_data(
+                home_team,
+                away_team
+            )
+        )
+
+        st.dataframe(
+            coaching,
+            use_container_width=True
+        )
+
+        # ----------------------------------------------------
+        # DOWNLOAD PREDICTION
+        # ----------------------------------------------------
+
+        prediction_csv = (
+            create_prediction_csv(
+                prediction
+            )
+        )
+
+        st.download_button(
+
+            "⬇️ Download Prediction CSV",
+
+            data=
+                prediction_csv.to_csv(
+                    index=False
+                ),
+
+            file_name=(
+                f"{away_team}_vs_"
+                f"{home_team}_prediction.csv"
+            ),
+
+            mime="text/csv"
+        )
 
 
 # ============================================================
-# PROGRAM START
+# RUN PROGRAM
 # ============================================================
 
 if __name__ == "__main__":
+
     main()
